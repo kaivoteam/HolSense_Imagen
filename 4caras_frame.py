@@ -222,9 +222,11 @@ while(True):
     #calibrar esto
     w,h = 920,512#caras[0].size
     mascara = Image.new('RGB', (w,h))
+
+    print "hola mundo"
                             
     #achicarlos 1/5 del tamanno
-    size = w*aspecto_normal
+    size = int(w*aspecto_normal)
     caras[0].thumbnail((size,size)) #cara frente
     cara_frente = caras[0].rotate(180)#,expand=True)
     caras[1].thumbnail((size,size)) #cara izquierda
@@ -241,6 +243,7 @@ while(True):
     #distancia en height
     pos_x_der = w - w/3 - size/2
     dist_x = w/3
+
 
     mascara.paste(cara_frente, ( (w-size)/2, pos_y_frente))
     mascara.paste(cara_izquierda, ( pos_x_der - dist_x , (h - size)/2))

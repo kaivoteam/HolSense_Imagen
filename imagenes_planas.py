@@ -170,22 +170,22 @@ for i in range(frames):
     cara_atras = caras[3].rotate(0)#expand=True)
 
     #calibrar todo esto
-    size_w, size_h = caras[0].size
+    #size_w, size_h = caras[0].size
     #distancia en width
-    pos_y_frente = h- h/4 - size_h/2  #-size/2 para centrar
+    pos_y_frente = h- h/4 - size/2  #-size/2 para centrar
     dist_y = h/2
     #distancia en height
-    pos_x_der = w - w/3 - size_w/2
+    pos_x_der = w - w/3 - size/2
     dist_x = w/3
 
-    mascara.paste(cara_frente, ( (w-size_w)/2, pos_y_frente))
+    mascara.paste(cara_frente, ( (w-size)/2, pos_y_frente))
     if rotacion == -1:
-        mascara.paste(cara_izquierda, ( pos_x_der - dist_x , (h - size_h)/2))
-        mascara.paste(cara_derecha, (pos_x_der , (h - size_h)/2))         
+        mascara.paste(cara_izquierda, ( pos_x_der - dist_x , (h - size)/2))
+        mascara.paste(cara_derecha, (pos_x_der , (h - size)/2))         
     #if rotacion == 1:
     #   mascara.paste(caras[1], (w-w/3, h/2)) #cara izquierda
     #   mascara.paste(caras[2], (w/3, h/2))   #cara derecha
-    mascara.paste(cara_atras, ( (w-size_w)/2, pos_y_frente - dist_y))   
+    mascara.paste(cara_atras, ( (w-size)/2, pos_y_frente - dist_y))   
     #mascara.show()
     #mascara.save("imagen.png")
 
@@ -198,7 +198,7 @@ mascara.save("imagen.png")
 
 #guardar secuencia
 if len(secuencia)>1:
-	save_sequence(secuencia, 'out.gif')
+    save_sequence(secuencia, 'out.gif')
 
 import numpy as np
 print "Demoro %f segundos en promedio por frame"%(np.mean(tiempos_crear_frames))
