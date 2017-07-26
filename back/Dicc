@@ -2,3 +2,13 @@ Imagenes giran hacia la derecha
 primera cara qu ese ve es la izquierda
 
 imagenes cuadradas, sino las corta
+
+caras4_frame.py // tiene funciones para realizar los movimientos (ademas de las variables globales que se supone qu estaran definidas)
+
+imagenes_planas.py //crea los 4 angulos de gifs e imagenes planas
+
+mover_imagen_gif.py //mueve imagen a traves de gif ya creado
+
+funcional.py //(codigo para realizar las pruebas)
+
+
