@@ -3,32 +3,30 @@ from PIL import Image, ImageFile, ImageChops,ImageOps
 
 from imports_imagenes import * #del codigo imports_imagenes.py
 
-##------------------DATOS NECESARIOS-----------------------------
-##esto vendria definido de antemano (variables globales)
-
-#4 imagenes en 4 angulos
-angulos = [0.0, 90.0, 180.0, 270.0]
-
-name_image = raw_input("Nombre de imagen GIF: ")
-
-#Asumiendo que estan en la misma carpeta
-im = Image.open("./imagenes/"+name_image+".gif")
-print(im.format, im.size, im.mode)
-
-frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
-print "La imagen tiene %d frames"%(frames)
-##------------------DATOS NECESARIOS-----------------------------
-
-
-
 ##donde va la cantidad de movimiento (Girar o zoom) ?cliente o server?
 
 #####-------CLIENTE (INDICA QUE ACCION REALIZAR)-----------------------
 if __name__ == "__main__":
+	##------------------DATOS NECESARIOS-----------------------------
+	##esto vendria definido de antemano (variables globales)
+
+	name_image = raw_input("Nombre de imagen GIF: ")
+
+	#Asumiendo que estan en la misma carpeta
+	im = Image.open("./imagenes/"+name_image+".gif")
+	print(im.format, im.size, im.mode)
+
+	frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
+	print "La imagen tiene %d frames"%(frames)
+	##------------------DATOS NECESARIOS-----------------------------
+
 
 	#Movimiento de la imagen a traves de actual
 	current = 0 #frame en el momento (actual)
 	zoom = 1.0  #zoom en el momento (actual)
+
+	#annade: memoria
+	caras_memoria = cargar_caras(im,current,frames)
 
 	while(True):
 	    opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n")
@@ -56,7 +54,16 @@ if __name__ == "__main__":
 	        continue
 
 	    #>>>>>>> REALIZAR ACCION >>>>>>>
+	    #annade: memoria
+	    if opcion =='3' or opcion == '4': #para opciones que solo redimensionan (zoom)
+	    	memoria = True
+	    else:
+	    	memoria = False
+
 	    #imagen, frames y angulos vienen de server?
-	    hacer(im, frames, angulos,current,zoom) ##funcion dentro de imports_imagenes
+	    #global caras_memoria
+	    caras_memoria = hacer(im, frames,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
+		
+	    #hacer(im, frames, angulos,current,zoom) ##funcion dentro de imports_imagenes
 	    
 	    print "Demoro %f segundos en total"%(time.time() - start_time)

@@ -11,4 +11,9 @@ mover_imagen_gif.py //mueve imagen a traves de gif ya creado
 
 funcional.py //(codigo para realizar las pruebas)
 
+con imagenes de 320x320 anda super bien (rapido)
+con 640x640 sube un poco
+
+tiempo aumenta si se tiene una imagen de mayor tamanno (si se hace zoom igual)
+
 

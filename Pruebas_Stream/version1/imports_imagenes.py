@@ -4,7 +4,7 @@ import numpy as np
 
 #####-------CODIGO PARA MOVER-----------------------
 #annade: memoria
-def hacer(im,frames, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
+def hacer(im,frames,figura, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
     de_cabeza = 0 #para que este de cabeza probar con: 180
 
     tamanno_original = min(im.size) 
@@ -39,6 +39,9 @@ def hacer(im,frames, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
 
     ##---------------------AJUSTAR--------------------------
     if zoom > 1: #si se sale de los limites del ratio base
+        #definir un zoom maximo ya que se ve mal si se hace mucho zoom
+        # se pierde la imagen
+
         #tamanno seria de tamanno_actual*aspecto_normal para manternerlo
         tamanno = aspecto_normal(tamanno_mascara)
 
@@ -49,7 +52,7 @@ def hacer(im,frames, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
         cara_izquierda = cara_izquierda.crop((x1, x2, y1, y2))
         cara_derecha = cara_derecha.crop((x1, x2, y1, y2))
         cara_atras = cara_atras.crop((x1, x2, y1, y2))
-        
+
     ##-------------------------POSICIONAR IMAGEN EN 4 LUGARES-------------------
     delta_imagenes = redondear_a_int( tamanno_mascara/3 - aspecto_normal(tamanno_mascara) )
 
@@ -76,12 +79,14 @@ def hacer(im,frames, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
     mascara.paste(cara_frente, ( mitad_w, pos_y_frente))
     mascara.paste(cara_izquierda, ( pos_x_izq , mitad_h ))
     mascara.paste(cara_derecha, (pos_x_der , mitad_h ))         
-    mascara.paste(cara_atras, ( mitad_w, pos_y_atras))     
+    mascara.paste(cara_atras, ( mitad_w, pos_y_atras))   
 
     #mostrar y guardar
-    mascara.show()
+    #mascara.show()
     #mascara.save('imagen.png')
     #guardar?
+    data = np.asarray(mascara)
+    figura.set_array(data)
 
     return caras_memoria
 
