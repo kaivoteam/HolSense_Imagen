@@ -62,8 +62,7 @@ if __name__ == "__main__":
 
 	    #imagen, frames y angulos vienen de server?
 	    #global caras_memoria
-	    caras_memoria = hacer(im, frames,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
-		
+	    hacer(im, frames,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
 	    #hacer(im, frames, angulos,current,zoom) ##funcion dentro de imports_imagenes
 	    
 	    print "Demoro %f segundos en total"%(time.time() - start_time)

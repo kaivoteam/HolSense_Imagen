@@ -1,11 +1,20 @@
-from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw
+from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw,ImageFont
 
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
+def redondear_a_int(numero):
+    """ Descripcion:
+            Funcion que redondea el numero al entero mas cercano
+    """
+    return int(round(numero))
+
 def cantidad_frames(imagen):
+    """ Descripcion:
+            Funcion que calcula la cantidad de frames en una imagen
+    """
     cantidad_frames = 0
     try:
         while 1:
@@ -14,20 +23,37 @@ def cantidad_frames(imagen):
     except EOFError:
         pass
     return cantidad_frames-1
+
 def angulo_a_frame(angulo,frames):
-    return int( round( angulo * frames / 360.0) )
+    """ Descripcion:
+            Funcion que calcula el frame correspondiente a un angulo
+
+        Args:
+            *angulo: angulo a buscar el frame
+            *frames: cantidad de frames de la imagen
+    """
+    return redondear_a_int( float(angulo) * frames / 360.0)
 
 #caracteristicas de calibracion
-#aspecto_normal =    #0.2 # o 1/5
 def aspecto_normal(tamanno):
-    delta = 10.0 #delta fijo
-    return int( round(tamanno/3.0 - delta) )
+    """ Descripcion:
+            Funcion que calcula el aspecto normal de la imagen (basado en dimensiones fijas)
 
-def redondear_a_int(numero):
-    return int(round(numero))
+        Args:
+            *tamanno: tamanno real de la imagen
+        *delta: la cantidad de espacio extra fuera de la imagen, para que no quede pegada a los bordes
+    """
+    delta = redondear_a_int(tamanno/40.0) #delta fijo
+    #delta = redondear_a_int(0.3*40.0) #delta fijo
+    return redondear_a_int(tamanno/3.0 - delta) 
 
-def trim(imag): #remueve bordes (o acerca) hasta un cierto delta
-    delta = 20 #calibrar esto (es el espacio extra anndido alrededor del bbox)
+def trim(imag): 
+    """ Descripcion:
+            Funcion que remueve bordes (o acerca) de una imagen hasta un cierto delta
+
+        *delta: Es el espacio extra anndido alrededor del bbox
+    """
+    delta = 50 #calibrar esto
 
     bg = Image.new(imag.mode,imag.size,imag.getpixel((0,0)))
     diff = ImageChops.difference(imag,bg)
@@ -36,7 +62,6 @@ def trim(imag): #remueve bordes (o acerca) hasta un cierto delta
     if bbox:  
         tamanno_extra = ( bg.size[0] - bbox[2] , bg.size[1]- bbox[3] )
         if np.min(tamanno_extra) < delta: #no remueve bordes
-            print "HOLA MUNDITO"
             return imag #para no agregar fondo extra a la imagen (bordes feos)
 
         else: #hace crop a las imagenes necesarias
@@ -50,8 +75,20 @@ def trim(imag): #remueve bordes (o acerca) hasta un cierto delta
         return imag
 
 ##-----------------CREAR LA IMAGEN---------------
+#4 imagenes en 4 angulos
+angulos = [0.0, 90.0, 180.0, 270.0]
 def cargar_caras(im,current,frames):
+    """ Descripcion:
+            Funcion que carga las 4 caras de la imagen y las devuelve en una lista
+
+        Args:
+            *im: imagen
+            *current: actual frame
+            *frames: cantidad de frames de la imagen
+    """
+    global angulos
     #ver el tema de la resolucion de la imagen
+    #si es muy grande achicarla? 
     caras = []
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
@@ -61,10 +98,21 @@ def cargar_caras(im,current,frames):
 
         nueva_im = trim(nueva_im) #achicar bordes (centra al centro xd)
 
+        #ver como hacer trim sin cambiar tamanno en cada giro (recuerde el maximo size?)
+
         #imagenes cuadradas (rellena para dejar cuadrado)
         nuevo_size = np.max(nueva_im.size)
         imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), (0,0,0))
         imagen_a_guardar.paste(nueva_im, ( (nuevo_size - nueva_im.size[0]) /2, (nuevo_size - nueva_im.size[1])/2 ))
+        del nueva_im
+
+        #agregar texto (**EXTRA**)
+        draw = ImageDraw.Draw(imagen_a_guardar)
+        fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',40)
+        pos = ( imagen_a_guardar.size[0]/2 - imagen_a_guardar.size[0]/7, -10)
+        draw.text(pos, name_image,font=fnt, fill='white')
+        draw.line( (imagen_a_guardar.size[0]/2, -10) + (imagen_a_guardar.size[0]/2,imagen_a_guardar.size[1]/2) ,fill='white')
+        del draw
 
         """if nueva_im.size[0] != nueva_im.size[1]: #esto no las deja perfectamente cuadradas
             
@@ -116,9 +164,6 @@ def cargar_caras(im,current,frames):
         caras.append(imagen_a_guardar) #se ve choro asi ImageChops.invert(imagen_a_guardar)
     return list(caras)
 
-#4 imagenes en 4 angulos
-angulos = [0.0, 90.0, 180.0, 270.0]
-
 
 #####-------CODIGO PARA MOVER-----------------------
 name_image = raw_input("Nombre de imagen GIF: ")
@@ -140,7 +185,7 @@ de_cabeza = 0 #para que este de cabeza probar con: 180
 
 #con memoria (Si no realiza mov)
 caras_memoria = cargar_caras(im,current,frames) #para que zoom sea mas rapido
-print caras_memoria[0].size
+
 #mostrar la imagen primera antes de alguna accion
 
 while(True):
@@ -173,10 +218,18 @@ while(True):
         caras = [cara.copy() for cara in caras_memoria] #ya que cada cara es una referencia
     else:
         caras = cargar_caras(im,current,frames)
-        caras_memoria = [cara.copy() for cara in caras]
+        #---ACTUALIZA CARAS_MEMORIA POR REFERENCIa----
+        #borrar referencia vieja
+        for cara in caras_memoria:
+            cara.close()
+            del cara
+        #vacia la lista
+        del caras_memoria[:] 
+        #actualizar
+        caras_memoria += [cara.copy() for cara in caras]
 
     #calibrar esto
-    w,h = 854,480 #1280,720 #quizas es muy pesada la imagen con esa resolucion
+    w,h = 854,480 #1280,720 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
     mascara = Image.new('RGB', (w,h))
     tamanno_mascara = min(w,h)
 
@@ -212,23 +265,10 @@ while(True):
         #definir un zoom maximo ya que se ve mal si se hace mucho zoom
         # se pierde la imagen la calidad de la imagen
 
-        #data = np.asarray(cara_frente)
-        #coords = np.argwhere(data< 240)  #np.where(data < 240, data,0)
-        #print coords
-        #x1,y1,z1 = coords.min(axis=0)
-        #x2,y2,z2 = coords.max(axis=0)+1
-
-        #convierte los menores a valor en 0 (negro)
-        #nueva_data = data[x1:x2, y1:y2,z1:z2] #cropped
-        #print nueva_data
-        #print nueva_data.shape
-        #cara_frente = Image.fromarray(np.uint8(nueva_data),'RGB')
-
         #tamanno seria de tamanno_actual*aspecto_normal para manternerlo
         tamanno = aspecto_normal(tamanno_mascara)
 
         #zoom al centro de la imagen
-        #modificar para que sea al centro del objeto (Costoso)
         x1 = x2= redondear_a_int( (tamanno_actual - tamanno)/2.0 )
         y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
 
@@ -240,7 +280,7 @@ while(True):
     ##-------------------------POSICIONAR IMAGEN EN 4 LUGARES-------------------
     delta_imagenes = redondear_a_int( tamanno_mascara/3 - aspecto_normal(tamanno_mascara) )
 
-    #Se presentan dos dimensiones por si se hace zoom y la dimension actual es menor a la normal
+    #Se presentan dos dimensiones por si se hace zoom y la dimension actual es menor a la normal (de las caras)
     dimension_normal = aspecto_normal(tamanno_mascara) + delta_imagenes # (quitarle el delta)dimension fija para situar las caras
     dimension_actual = min(cara_frente.size)           #dimension actual, despues de hacer zoom
     #con zoom = 1 ==> dimension_normal = dimension_actual
@@ -265,13 +305,12 @@ while(True):
     mascara.paste(cara_derecha, (pos_x_der , mitad_h ))         
     mascara.paste(cara_atras, ( mitad_w, pos_y_atras))   
 
-    #agregar texto (**EXTRA**)
-    #draw = ImageDraw.Draw(mascara)
-    #draw.text(( mitad_w+dimension_actual/2, pos_y_atras),name_image,fill='white')
-
     #mostrar y guardar
     mascara.show()
     mascara.save('imagen.png')
     #guardar?
+
+    #data = np.asarray(mascara)
+    #figura.set_array(data)
     
     print "Demoro %f segundos en total"%(time.time() - start_time)

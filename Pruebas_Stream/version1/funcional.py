@@ -47,7 +47,7 @@ def funcion_principal(i):
     	memoria = False
 
     global caras_memoria
-    caras_memoria = hacer(im, frames,figura,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
+    hacer(im, frames,figura,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
 	
 	#asi estaba antes
 	#hacer(im, frames, angulos,figura,current,zoom) ##funcion dentro de imports_imagenes
