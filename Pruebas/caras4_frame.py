@@ -62,17 +62,18 @@ def trim(imag):
     if bbox:  
         tamanno_extra = ( bg.size[0] - bbox[2] , bg.size[1]- bbox[3] )
         if np.min(tamanno_extra) < delta: #no remueve bordes
-            return imag #para no agregar fondo extra a la imagen (bordes feos)
+            print "HOLA MUNDO"
+            return tuple([0,0, bg.size[0], bg.size[1]] ) #imag #para no agregar fondo extra a la imagen (bordes feos)
 
         else: #hace crop a las imagenes necesarias
             nuevo_bbox = tuple([bbox[0] - delta,
                                 bbox[1] - delta,
                                 bbox[2] + delta,
                                 bbox[3] + delta ])
-            return imag.crop(nuevo_bbox)
+            return nuevo_bbox#imag.crop(nuevo_bbox)
     else:
         print "Ocurrio un suceso inesperado"
-        return imag
+        return False#imag
 
 ##-----------------CREAR LA IMAGEN---------------
 #4 imagenes en 4 angulos
@@ -87,49 +88,26 @@ def cargar_caras(im,current,frames):
             *frames: cantidad de frames de la imagen
     """
     global angulos
-    #ver el tema de la resolucion de la imagen
-    #si es muy grande achicarla? 
+
     caras = []
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
         #print ("para angulo", angulo,"es necesario ir al frame ",frame_angulo)
         im.seek(frame_angulo-1)
         nueva_im = im.copy()
-
-        nueva_im = trim(nueva_im) #achicar bordes (centra al centro xd)
-
-        #ver como hacer trim sin cambiar tamanno en cada giro (recuerde el maximo size?)
-
-        #imagenes cuadradas (rellena para dejar cuadrado)
-        nuevo_size = np.max(nueva_im.size)
-        imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), (0,0,0))
-        imagen_a_guardar.paste(nueva_im, ( (nuevo_size - nueva_im.size[0]) /2, (nuevo_size - nueva_im.size[1])/2 ))
-        del nueva_im
-
-        #agregar texto (**EXTRA**)
-        draw = ImageDraw.Draw(imagen_a_guardar)
-        fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',40)
-        pos = ( imagen_a_guardar.size[0]/2 - imagen_a_guardar.size[0]/7, -10)
-        draw.text(pos, name_image,font=fnt, fill='white')
-        draw.line( (imagen_a_guardar.size[0]/2, -10) + (imagen_a_guardar.size[0]/2,imagen_a_guardar.size[1]/2) ,fill='white')
-        del draw
-
-        """if nueva_im.size[0] != nueva_im.size[1]: #esto no las deja perfectamente cuadradas
-            
-            longer_side = np.max(nueva_im.size)
-            horizontal_padding = (longer_side - nueva_im.size[0]) / 2.0
-            vertical_padding = (longer_side - nueva_im.size[1]) / 2.0
-            nueva_im = nueva_im.crop(
-                (
-                    -horizontal_padding,
-                    -vertical_padding,
-                    redondear_a_int( nueva_im.size[0] + horizontal_padding),
-                    redondear_a_int( nueva_im.size[1] + vertical_padding)
-                )
-            )
-            """
         
-        ##---calcula centro de masa para posicionar la imagen... muy costoso------
+        caras.append(nueva_im) #se ve choro asi ImageChops.invert(imagen_a_guardar)
+    return list(caras)
+
+def centrar_4caras(caras):
+    for i in range(len(caras)):
+        cara = caras[i]
+        nueva_cara = cara.crop(trim(cara))#achicar bordes (centra al centro xd)
+
+        caras[i].close()
+        del cara
+        caras[i] = nueva_cara
+         ##---calcula centro de masa para posicionar la imagen... muy costoso------
         """
         immat = imagen_a_guardar.load()
 
@@ -151,19 +129,26 @@ def cargar_caras(im,current,frames):
 
         print imagen_a_guardar.size
         print "centro de masa: ",(cx,cy)
+
+
+        #otra forma de hacerlo
+        (X,Y) = imagen_a_guardar.size
+
+
+        m = np.sum(np.asarray(imagen_a_guardar), -1) < 255*3
+        m = m/ np.sum(np.sum(m))
+
+        dx = np.sum(m,0)
+        dy = np.sum(m,1)
+
+        #expected values
+        cx = np.sum(dx * np.arange(X))
+        cy = np.sum(dy * np.arange(Y))
+
+        print imagen_a_guardar.size
+        print "centro de masa: ",(cx,cy)
+
         """
-
-        #hace un circulo pero se demora harto... mejor fondo negro nomas
-        #bigsize = (imagen_a_guardar.size[0]*3, imagen_a_guardar.size[1] *3)
-        #mask = Image.new('L',bigsize,0)
-        #draw = ImageDraw.Draw(mask)
-        #draw.ellipse((0,0)+bigsize,fill=255)
-        #mask=mask.resize(imagen_a_guardar.size,Image.ANTIALIAS)
-        #imagen_a_guardar.putalpha(mask)
-
-        caras.append(imagen_a_guardar) #se ve choro asi ImageChops.invert(imagen_a_guardar)
-    return list(caras)
-
 
 #####-------CODIGO PARA MOVER-----------------------
 name_image = raw_input("Nombre de imagen GIF: ")
@@ -175,13 +160,17 @@ print(im.format, im.size, im.mode)
 frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
 print "La imagen tiene %d frames"%(frames)
 
-tamanno_original = min(im.size) #para imagenes cuadradas
+tamanno_original = min(im.size) 
 
 #Movimiento de la imagen a traves de actual
 current = 0 #frame en el momento (actual)
 zoom = 1.0  #zoom en el momento (actual)
 
 de_cabeza = 0 #para que este de cabeza probar con: 180
+
+#hacer trim al primer frame y mantener ese aspectoo.. (para no tener que cambiar si el objeto cambia al darlo vuelta)
+#im.seek(0)
+#dimensiones_trim = trim( im.copy()) #achicar bordes (centra al centro xd)
 
 #con memoria (Si no realiza mov)
 caras_memoria = cargar_caras(im,current,frames) #para que zoom sea mas rapido
@@ -222,11 +211,8 @@ while(True):
         #borrar referencia vieja
         for cara in caras_memoria:
             cara.close()
-            del cara
-        #vacia la lista
-        del caras_memoria[:] 
-        #actualizar
-        caras_memoria += [cara.copy() for cara in caras]
+        del caras_memoria[:] #vacia la lista
+        caras_memoria += [cara.copy() for cara in caras] #actualizar
 
     #calibrar esto
     w,h = 854,480 #1280,720 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
@@ -236,46 +222,71 @@ while(True):
     #nuevo tamanno
     tamanno_actual = int( aspecto_normal(tamanno_mascara) * zoom )
 
-    ##----------------------ROTAR Y REDIMENSIONAR-------------------------------
-    ##esto se podria paralelizar.. se demora unos 0.03 seg
-    if caras[0].size[0] > tamanno_actual : 
-        caras[0].thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
-        cara_frente = caras[0].rotate(180+de_cabeza)#,expand=True)
-        caras[1].thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara izquierda
-        cara_izquierda = caras[1].rotate(90+de_cabeza)#,expand=True)
-        caras[2].thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara derecha
-        cara_derecha = caras[2].rotate(270+de_cabeza)#,expand=True)
-        caras[3].thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara atras
-        cara_atras = caras[3].rotate(0+de_cabeza)#,expand=True)
-    else:  #si el zoom supera el tamanno actual de la imagen
-        cara_aux = caras[0].resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
-        cara_frente = cara_aux.rotate(180+de_cabeza)#,expand=True)
-        cara_aux = caras[1].resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara izquierda
-        cara_izquierda = cara_aux.rotate(90+de_cabeza)#,expand=True)
-        cara_aux = caras[2].resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara derecha
-        cara_derecha = cara_aux.rotate(270+de_cabeza)#,expand=True)
-        cara_aux = caras[3].resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara atras
-        cara_atras = cara_aux.rotate(0+de_cabeza)#,expand=True)
+    ##------------------PREPROCESAR CARAS (CENTRAR, RELLENAR, REDIMENSIONAR( + ajuste ZOOM) y ROTAR)----------------------------
+    #CENTRAR
+    centrar_4caras(caras) #con respecto al objeto (bbox)
+
+    for i in range(len(caras)): ##---esto se podria paralelizar....
+        nueva_im = caras[i].copy()
+
+        #IMAGENES CUADRADAS(rellena para dejar cuadrado)
+        if nueva_im.size[0] != nueva_im.size[1]:
+            nuevo_size = np.max(nueva_im.size)
+            imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), (0,0,0))
+            imagen_a_guardar.paste(nueva_im, ( (nuevo_size - nueva_im.size[0]) /2, (nuevo_size - nueva_im.size[1])/2 ))
+
+        #REDIMENSIONAR
+        if imagen_a_guardar.size[0] > tamanno_actual : 
+            imagen_a_guardar.thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
+        else:  #si el zoom supera el tamanno actual de la imagen
+            imagen_a_guardar = imagen_a_guardar.resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
+
+        ##---------------------------AJUSTAR-------------------------------
+        if zoom > 1: #si se sale de los limites del ratio base
+            #definir un zoom maximo ya que se ve mal si se hace mucho zoom
+            # se pierde la imagen la calidad de la imagen
+
+            #tamanno seria de tamanno_actual*aspecto_normal para manternerlo
+            tamanno = aspecto_normal(tamanno_mascara)
+
+            #zoom al centro de la imagen
+            x1 = x2= redondear_a_int( (tamanno_actual - tamanno)/2.0 )
+            y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
+
+            imagen_a_guardar = imagen_a_guardar.crop((x1, x2, y1, y2))
+            #cara_izquierda = cara_izquierda.crop((x1, x2, y1, y2))
+            #cara_derecha = cara_derecha.crop((x1, x2, y1, y2))
+            #cara_atras = cara_atras.crop((x1, x2, y1, y2))
+
+        #hace un circulo pero se demora harto... mejor fondo negro nomas
+        #bigsize = (imagen_a_guardar.size[0]*3, imagen_a_guardar.size[1] *3)
+        #mask = Image.new('L',bigsize,0)
+        #draw = ImageDraw.Draw(mask)
+        #draw.ellipse((0,0)+bigsize,fill=255)
+        #mask=mask.resize(imagen_a_guardar.size,Image.ANTIALIAS)
+        #imagen_a_guardar.putalpha(mask)
+
+        caras[i].close()
+        del nueva_im
+        caras[i] = imagen_a_guardar
+
+    #agregar texto (**EXTRA**)
+    for cara in caras:
+        fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',20)
+        draw = ImageDraw.Draw(cara)
+        pos = ( cara.size[0]/2 - cara.size[0]/7, -5)
+        draw.text(pos, name_image,font=fnt, fill='white')
+        draw.line( (cara.size[0]/2, -5) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
+        del draw
+
+    #ROTAR .---esto se podria paralelizar.. se demora unos 0.03 seg
+    cara_frente = caras[0].rotate(180+de_cabeza)#,expand=True)
+    cara_izquierda = caras[1].rotate(90+de_cabeza)#,expand=True)
+    cara_derecha = caras[2].rotate(270+de_cabeza)#,expand=True)
+    cara_atras = caras[3].rotate(0+de_cabeza)#,expand=True)
 
     #data = np.asarray(cara_frente,dtype='int32')
     #cara_frente = Image.fromarray(np.uint8(data),'RGB')
-    
-    ##---------------------------AJUSTAR-------------------------------
-    if zoom > 1: #si se sale de los limites del ratio base
-        #definir un zoom maximo ya que se ve mal si se hace mucho zoom
-        # se pierde la imagen la calidad de la imagen
-
-        #tamanno seria de tamanno_actual*aspecto_normal para manternerlo
-        tamanno = aspecto_normal(tamanno_mascara)
-
-        #zoom al centro de la imagen
-        x1 = x2= redondear_a_int( (tamanno_actual - tamanno)/2.0 )
-        y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
-
-        cara_frente = cara_frente.crop((x1, x2, y1, y2))
-        cara_izquierda = cara_izquierda.crop((x1, x2, y1, y2))
-        cara_derecha = cara_derecha.crop((x1, x2, y1, y2))
-        cara_atras = cara_atras.crop((x1, x2, y1, y2))
 
     ##-------------------------POSICIONAR IMAGEN EN 4 LUGARES-------------------
     delta_imagenes = redondear_a_int( tamanno_mascara/3 - aspecto_normal(tamanno_mascara) )
