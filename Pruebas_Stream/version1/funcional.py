@@ -46,7 +46,7 @@ def funcion_principal(i):
     else:
     	memoria = False
 
-    global caras_memoria
+    global caras_memoria #se modifica por referencia
     hacer(im, frames,figura,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
 	
 	#asi estaba antes
@@ -78,8 +78,8 @@ if __name__ == "__main__":
 
 	#antes aca iba while
 
-	w,h = 854,480 #1280,720 #quizas es muy pesada la imagen con esa resolucion
-	mascara = Image.new('RGB', (w,h))
+	w,h = 1280,720 #854,480 # #quizas es muy pesada la imagen con esa resolucion
+	mascara = Image.new('RGB', (w,h),'black')
 	data = np.asarray(mascara)
 
 	fig = plt.figure()
