@@ -27,8 +27,10 @@ if __name__ == "__main__":
 
 	#annade: memoria
 	caras_memoria = cargar_caras(im,current,frames)
+	centrar_4caras(caras_memoria)
 
 	while(True):
+		#ver lo de primero mover derecha o izq
 	    opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n")
 
 	    start_time = time.time()

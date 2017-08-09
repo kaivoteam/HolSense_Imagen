@@ -138,15 +138,16 @@ def trim(imag):
         print "Ocurrio un suceso inesperado"
         return False#imag
 
-def centrar_4caras_nuevo(caras): #ver esto...
+def centrar_4caras_ajustar(caras):
     """ Descripcion:
-            Funcion que centra las 4 caras (desde el principio)
+            Funcion que centra las 4 caras
     """
     for i in range(len(caras)):
         cara = caras[i]
 
         dimensiones_trim = trim(cara)
-        nueva_cara = cara.crop(dimensiones_trim)#achicar bordes (centra al centro xd)
+        crop_caras[i] = dimensiones_trim
+        nueva_cara = cara.crop(crop_caras[i])#achicar bordes (centra al centro xd)
 
         caras[i].close()
         caras[i] = nueva_cara
@@ -175,20 +176,6 @@ def trim2(cara):#otra forma de hacerlo
     print cara.size
     print "centro de masa: ",(cx,cy)
 """
-def centrar_cara(cara):
-    dimensiones_trim = trim(cara)
-
-    nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
-
-    #IMAGENES CUADRADAS (rellena para dejar cuadrado) 
-    if nueva_cara.size[0] != nueva_cara.size[1]:
-        nuevo_size = np.max(nueva_cara.size)
-        imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), (0,0,0))
-        imagen_a_guardar.paste(nueva_cara, ( (nuevo_size - nueva_cara.size[0]) /2, (nuevo_size - nueva_cara.size[1])/2 ))
-    else:
-        imagen_a_guardar = nueva_cara
-    print "se hizo"
-    return imagen_a_guardar
 
 primero = True #para mantener el aspecto del primero
 crop_caras = []
@@ -200,7 +187,7 @@ def centrar_4caras(caras): #centra
     global primero,crop_caras
 
     for i in range(len(caras)):
-        cara = caras[i]
+        cara = caras[i].copy()
 
         if primero:
             crop_caras.append(trim(cara))
@@ -211,6 +198,7 @@ def centrar_4caras(caras): #centra
         #IMAGENES CUADRADAS (rellena para dejar cuadrado) 
         if nueva_cara.size[0] != nueva_cara.size[1]:
             nuevo_size = np.max(nueva_cara.size)
+
             imagen_a_guardar = Image.new('RGBA', (nuevo_size,nuevo_size), 'black')
             imagen_a_guardar.paste(nueva_cara, ( (nuevo_size - nueva_cara.size[0]) /2, (nuevo_size - nueva_cara.size[1])/2 ))
         else:
@@ -221,21 +209,6 @@ def centrar_4caras(caras): #centra
 
     if primero:
         primero=False
-
-def rellenar(caras): #--fijo
-    for i in range(len(caras)): ##---esto se podria paralelizar....
-        nueva_im = caras[i].copy()
-
-        #IMAGENES CUADRADAS (rellena para dejar cuadrado) 
-        if nueva_im.size[0] != nueva_im.size[1]:
-            nuevo_size = np.max(nueva_im.size)
-            imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), (0,0,0))
-            imagen_a_guardar.paste(nueva_im, ( (nuevo_size - nueva_im.size[0]) /2, (nuevo_size - nueva_im.size[1])/2 ))
-        else:
-            imagen_a_guardar = nueva_im
-
-        caras[i].close()
-        caras[i] = imagen_a_guardar
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """ Descripcion:
@@ -272,7 +245,6 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
             y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
 
             nueva_im = nueva_im.crop((x1, x2, y1, y2))
-
         """
         w, h = imagen_a_guardar.size
         rad = w/3
@@ -350,21 +322,25 @@ caras_memoria = cargar_caras(im,current,frames) #para que zoom sea mas rapido
 centrar_4caras(caras_memoria) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
 #Para posicionar la imagen
-mascara = crear_mascara()
+#mascara = crear_mascara()
 
-tamanno_mascara = min(mascara.size)
-redimensionar_zoom(caras_memoria,tamanno_mascara,zoom)
+#tamanno_mascara = min(mascara.size)
+#redimensionar_zoom(caras_memoria,tamanno_mascara,zoom)
 
-cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras_memoria)
+#cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras_memoria)
+#imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
 
-imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
-imagen_Final.show()
+#imagen_Final.show()
 
-
-from multiprocessing.dummy import Pool as ThreadPool
+mostrar_primera = True
 
 while(True):
-    opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n")
+    if mostrar_primera:
+        opcion = '1'
+        mostrar_primera=False
+
+    else:
+        opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n")
 
     start_time = time.time()
 
@@ -386,7 +362,8 @@ while(True):
         zoom-=0.1
 
     elif opcion == '5': #calibrar
-        centrar_4caras_nuevo(caras)
+        #centrar_4caras_ajustar(caras)
+        #revisar esto
         continue
     elif opcion == 'algo':
         print "volver al principio... (reset)"
@@ -419,7 +396,7 @@ while(True):
         caras_memoria += [cara.copy() for cara in caras] #actualizar
         print "TIEMPO DEMORADO EN CARGAR : ",time.time()-tiempo_cargar
 
-
+    #centrar_4caras(caras)
     ##------------------PREPROCESAR CARAS (CENTRAR, RELLENAR, REDIMENSIONAR( + ajuste ZOOM) y ROTAR)----------------------------
     tiempo_crearmascara = time.time()
     mascara = crear_mascara()
