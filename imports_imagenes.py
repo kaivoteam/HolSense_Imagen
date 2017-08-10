@@ -4,7 +4,7 @@ import numpy as np
 
 #####-------CODIGO PARA MOVER-----------------------
 #annade: memoria
-def hacer(im,frames,figura, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
+def hacer(im,frames, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
     de_cabeza = 0 #para que este de cabeza probar con: 180
 
     tamanno_original = min(im.size) 
@@ -37,10 +37,7 @@ def hacer(im,frames,figura, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
     cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras)
 
     imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
-
-    data = np.asarray(imagen_Final)
-    figura.set_array(data)
-    
+    imagen_Final.show()
 
 def redondear_a_int(numero):
     """ Descripcion:
@@ -269,5 +266,5 @@ def crear_mascara():
             Funcion que crea la mascara
         *w,h: dimensiones para crear la mascara
     """
-    w,h =  854,480#1280,720 # #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
+    w,h =  1280,720 #854,480 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
     return Image.new('RGB', (w,h),'black')

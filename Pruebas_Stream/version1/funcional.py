@@ -78,8 +78,7 @@ if __name__ == "__main__":
 
 	#antes aca iba while
 
-	w,h = 1280,720 #854,480 # #quizas es muy pesada la imagen con esa resolucion
-	mascara = Image.new('RGB', (w,h),'black')
+	mascara = crear_mascara()
 	data = np.asarray(mascara)
 
 	fig = plt.figure()
