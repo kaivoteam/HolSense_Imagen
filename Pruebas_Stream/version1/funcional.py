@@ -21,13 +21,14 @@ def funcion_principal(i):
     #asignar un zoom maximo y zoom minimo
 
     if opcion == '1': # movimiento derecha
-        current +=1 %frames
+        current +=1 
+        current = current%frames
 
     elif opcion == '2': #movimiento izquierda
-        current -=1 %frames
-        if current <0: #ya que solo va en numeros positivos
-            current += frames
-
+        current -=1 
+        current = current %frames
+        #if current <0: #ya que solo va en numeros positivos
+         #   current += frames
     elif opcion == '3': #hacer zoom
         zoom+=0.1 #calibrar
 
@@ -55,36 +56,44 @@ def funcion_principal(i):
     print "Demoro %f segundos en total"%(time.time() - start_time)
 
 if __name__ == "__main__":
-	##------------------DATOS NECESARIOS-----------------------------
-	##esto vendria definido de antemano (variables globales)
+    ##------------------DATOS NECESARIOS-----------------------------
+    ##esto vendria definido de antemano (variables globales)
 
-	name_image = raw_input("Nombre de imagen GIF: ")
+    name_image = raw_input("Nombre de imagen GIF: ")
 
-	#Asumiendo que estan en la misma carpeta
-	im = Image.open("../../imagenes/"+name_image+".gif")
-	print(im.format, im.size, im.mode)
+    #Asumiendo que estan en la misma carpeta
+    im = Image.open("../../imagenes/"+name_image+".gif")
+    print(im.format, im.size, im.mode)
 
-	frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
-	print "La imagen tiene %d frames"%(frames)
-	##------------------DATOS NECESARIOS-----------------------------
+    frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
+    print "La imagen tiene %d frames"%(frames)
+    ##------------------DATOS NECESARIOS-----------------------------
 
 
-	#Movimiento de la imagen a traves de actual
-	current = 0 #frame en el momento (actual)
-	zoom = 1.0  #zoom en el momento (actual)
+    #Movimiento de la imagen a traves de actual
+    current = 0 #frame en el momento (actual)
+    zoom = 1.0  #zoom en el momento (actual)
 
-	#esto se annade por la memoria del archivo
-	caras_memoria = cargar_caras(im,current,frames)
+    #esto se annade por la memoria del archivo
+    caras_memoria = cargar_caras(im,current,frames)
+    centrar_4caras(caras_memoria)
 
-	#antes aca iba while
+    #antes aca iba while
 
-	mascara = crear_mascara()
-	data = np.asarray(mascara)
+    #MOSTRAR PRIMERA CARA
+    mascara = crear_mascara()
+    tamanno_mascara = min(mascara.size)
+    redimensionar_zoom(caras_memoria,tamanno_mascara,zoom)
+    cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras_memoria)
+    imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
 
-	fig = plt.figure()
-	ax = fig.add_subplot(1,1,1)
-	figura = ax.imshow(data, animated=True)
-	#hacer(im, frames,figura,current,zoom,memoria=False)
 
-	ani = animation.FuncAnimation(fig,funcion_principal,interval=0) #esta funcion hace el loop
-	plt.show()
+    data = np.asarray(imagen_Final)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    figura = ax.imshow(data, animated=True)
+    #hacer(im, frames,figura,current,zoom,memoria=False)
+
+    ani = animation.FuncAnimation(fig,funcion_principal,interval=0) #esta funcion hace el loop
+    plt.show()

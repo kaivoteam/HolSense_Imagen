@@ -1,4 +1,4 @@
-from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw,ImageFont
+from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw,ImageFont,  ImageSequence
 
 import time
 import numpy as np
@@ -105,8 +105,8 @@ def cargar_caras(im,current,frames):
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
         #print ("para angulo", angulo,"es necesario ir al frame ",frame_angulo)
-        im.seek(frame_angulo-1)
-        nueva_im = im.copy()
+        #im.seek(frame_angulo-1)
+        nueva_im = im[frame_angulo-1].copy()
         
         caras.append(nueva_im) #se ve choro asi ImageChops.invert(imagen_a_guardar)
     return list(caras)
@@ -138,59 +138,31 @@ def trim(imag):
         print "Ocurrio un suceso inesperado"
         return False#imag
 
-def centrar_4caras_ajustar(caras):
-    """ Descripcion:
-            Funcion que centra las 4 caras
-    """
-    for i in range(len(caras)):
-        cara = caras[i]
 
-        dimensiones_trim = trim(cara)
-        crop_caras[i] = dimensiones_trim
-        nueva_cara = cara.crop(crop_caras[i])#achicar bordes (centra al centro xd)
-
-        caras[i].close()
-        caras[i] = nueva_cara
-
-"""
-def trim2(cara):#otra forma de hacerlo
-     ##---calcula centro de masa para posicionar la imagen... muy costoso------
-    immat = cara.load()
-
-    pixel = cara.getpixel((0,0))
-    m = np.zeros(cara.size)
-    (X,Y) = cara.size
-    for x in range(X):
-        for y in range(Y):
-            m[x,y] = immat[(x,y)] != pixel
-    m = m/np.sum(np.sum(m))
-
-    #marginal distribution
-    dx = np.sum(m,1)
-    dy = np.sum(m,0)
-
-    #expected values
-    cx = np.sum(dx * np.arange(X))
-    cy = np.sum(dy * np.arange(Y))
-
-    print cara.size
-    print "centro de masa: ",(cx,cy)
-"""
-
-primero = True #para mantener el aspecto del primero
+ajustar_aspecto = True 
 crop_caras = []
+
+def ajustar_4caras():
+    """ Descripcion:
+            Funcion que cambia las variables globales para ajustar
+            las 4 caras de la imagen proyectada
+    """
+    global ajustar_aspecto,crop_caras
+    ajustar_aspecto = True
+    del crop_caras[:] #vacia la lista
+
 def centrar_4caras(caras): #centra
     """ Descripcion:
             Funcion que centra las 4 caras basado en el trim 
             y rellena la imagen para dejarla cuadrada
     """
-    global primero,crop_caras
+    global ajustar_aspecto,crop_caras
 
     for i in range(len(caras)):
         cara = caras[i].copy()
 
-        if primero:
-            crop_caras.append(trim(cara))
+        if ajustar_aspecto: #guarda las dimensiones para centrar de la primera cara
+            crop_caras.append(trim(cara)) #para mantener el aspecto del primero
         dimensiones_trim = crop_caras[i]
 
         nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
@@ -207,8 +179,9 @@ def centrar_4caras(caras): #centra
         caras[i].close()
         caras[i] = imagen_a_guardar
 
-    if primero:
-        primero=False
+    if ajustar_aspecto:
+        ajustar_aspecto=False
+
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """ Descripcion:
@@ -297,8 +270,17 @@ def crear_mascara():
         *w,h: dimensiones para crear la mascara
     """
     w,h =  1280,720 #854,480 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
-    return Image.new('RGBA', (w,h))
+    return Image.new('RGB', (w,h), 'black')
 
+
+def split_str(seq, chunk, skip_tail=False):
+    lst = []
+    if chunk <= len(seq):
+        lst.extend([seq[:chunk]])
+        lst.extend(split_str(seq[chunk:], chunk, skip_tail))
+    elif not skip_tail and seq:
+        lst.extend([seq])
+    return lst
 
 #####-------CODIGO PARA MOVER-----------------------
 name_image = raw_input("Nombre de imagen GIF: ")
@@ -310,6 +292,13 @@ print(im.format, im.size, im.mode)
 frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
 print "La imagen tiene %d frames"%(frames)
 
+#probar de esta manera x mientras...
+import sys
+todos_frames = [f.copy() for f in ImageSequence.Iterator(im)]
+im.close()
+print "tmanno de la imagen leida " ,sys.getsizeof(im)
+print "tmaanno de la imagen en formato lista ", sys.getsizeof(todos_frames)
+
 #Movimiento de la imagen a traves de actual
 current = 0 #frame en el momento (actual)
 zoom = 1.0  #zoom en el momento (actual)
@@ -318,8 +307,10 @@ zoom = 1.0  #zoom en el momento (actual)
 
 #con memoria (Si no realiza mov)
 #Preproceso: Cargar->Centrar->rellenar->zoom
-caras_memoria = cargar_caras(im,current,frames) #para que zoom sea mas rapido
+caras_memoria = cargar_caras(todos_frames,current,frames) #para que zoom sea mas rapido
 centrar_4caras(caras_memoria) #con respecto al objeto (bbox) --solo cambia con derech e izq
+
+print "tamanno de caras ",sys.getsizeof(caras_memoria)
 
 #Para posicionar la imagen
 #mascara = crear_mascara()
@@ -340,7 +331,7 @@ while(True):
         mostrar_primera=False
 
     else:
-        opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n")
+        opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n5 Centrar\n6 Agregar texto\n")
 
     start_time = time.time()
 
@@ -361,32 +352,44 @@ while(True):
     elif opcion == '4': #quitar zoom
         zoom-=0.1
 
+    ##FUNCIONES EXTRA AGREGADAS...
     elif opcion == '5': #calibrar
-        #centrar_4caras_ajustar(caras)
-        #revisar esto
-        continue
+        print "funcion activada necesarioa agregarlo"
+        ajustar_4caras() #ajusta para que la proxima cara mostrada este centrada
+
+        #quizas falta agregar mostrar la cara centrada?
+
+        #continue
+    elif opcion == '6':
+        texto_proyeccion = raw_input("Ingrese texto: ")
+
     elif opcion == 'algo':
         print "volver al principio... (reset)"
     else:
         print("Movimiento invalido")
         continue
 
+    if opcion == '3' or opcion == '4':
+        memoria = True
+    else:
+        memoria = False
+
     ##-----------------CREAR LA IMAGEN (CON MEMORIA---------------
-    if opcion == '3' or opcion == '4' : #solo para zoom (utiliza la que tiene en memoria)
+    if memoria and not ajustar_aspecto: #si es que no ha centrado (ajustar aspecto agregado)
+        print "utiliza memoria"
+        #solo para zoom (utiliza la que tiene en memoria)
         caras = [cara.copy() for cara in caras_memoria] #ya que cada cara es una referencia
 
     else: #CARGAR nueva imagen y preprocesar -->> juntar cargar + centar + rellenar
+
         tiempo_cargar = time.time()
 
-        caras = cargar_caras(im,current,frames)
-
         ####-----------PREPROCESAR (CENTrAR + RELLENAR)---------------------
+        caras = cargar_caras(todos_frames,current,frames)
+
         centrar_4caras(caras) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
-        #pool = ThreadPool(len(caras))
-        #caras = pool.map(centrar_cara, caras)
-        #pool.close()
-        #pool.join()
+        print "TIEMPO DEMORADO EN CARGAR : ",time.time()-tiempo_cargar
 
         #---ACTUALIZA CARAS_MEMORIA POR REFERENCIa----
         #borrar referencia vieja
@@ -394,7 +397,6 @@ while(True):
             cara.close()
         del caras_memoria[:] #vacia la lista
         caras_memoria += [cara.copy() for cara in caras] #actualizar
-        print "TIEMPO DEMORADO EN CARGAR : ",time.time()-tiempo_cargar
 
     #centrar_4caras(caras)
     ##------------------PREPROCESAR CARAS (CENTRAR, RELLENAR, REDIMENSIONAR( + ajuste ZOOM) y ROTAR)----------------------------
@@ -405,27 +407,35 @@ while(True):
     tiempo_zoom = time.time()
     tamanno_mascara = min(mascara.size)
     redimensionar_zoom(caras,tamanno_mascara,zoom)
-
     print "TIEMPO DEMORADO EN ZOOM: ",time.time()-tiempo_zoom
 
     #agregar texto (**EXTRA**)
-    """
-    for cara in caras:
-        fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',20)
-        draw = ImageDraw.Draw(cara)
-        pos = ( cara.size[0]/2 - cara.size[0]/7, -5)
-        draw.text(pos, name_image,font=fnt, fill='white')
-        draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
-        del draw
-    """
+    if 'texto_proyeccion' in locals(): #texto
+        for cara in caras:
+            print texto_proyeccion
+
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',15)
+            draw = ImageDraw.Draw(cara)
+            w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
+
+            if w_draw > cara.size[0]: #subdividir en textos
+                veces = w_draw/cara.size[0]
+
+                nuevo_string = split_str(texto_proyeccion,len(texto_proyeccion)/(veces+1))
+                texto_proyeccion = '\n'.join(nuevo_string)
+                w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
+
+            pos = ( (cara.size[0] - w_draw)/2, 0)
+            draw.text(pos, texto_proyeccion,font=fnt, fill='white')
+
+            #draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
+            del draw
+        del texto_proyeccion
+
 
     tiempo_rotar = time.time()
     #ROTAR
     cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras)
-    #cara_frente = caras[0].rotate(180+de_cabeza)#,expand=True)
-    #cara_izquierda = caras[1].rotate(90+de_cabeza)#,expand=True)
-    #cara_derecha = caras[2].rotate(270+de_cabeza)#,expand=True)
-    #cara_atras = caras[3].rotate(0+de_cabeza)#,expand=True)
     print "TIEMPO EN ROTAR: ",time.time()-tiempo_rotar
 
     #data = np.asarray(cara_frente,dtype='int32')
@@ -441,6 +451,7 @@ while(True):
     timeextra = time.time()
     imagen_Final.show()
     imagen_Final.save('imagen.png')
+
     print "TIEMPO DEMORADO EN GUARDAR Y MOSTRAR: ",time.time()-timeextra
 
     #data = np.asarray(mascara)
