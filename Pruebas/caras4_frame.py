@@ -171,7 +171,7 @@ def centrar_4caras(caras): #centra
         if nueva_cara.size[0] != nueva_cara.size[1]:
             nuevo_size = np.max(nueva_cara.size)
 
-            imagen_a_guardar = Image.new('RGBA', (nuevo_size,nuevo_size), 'black')
+            imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), 'black')
             imagen_a_guardar.paste(nueva_cara, ( (nuevo_size - nueva_cara.size[0]) /2, (nuevo_size - nueva_cara.size[1])/2 ))
         else:
             imagen_a_guardar = nueva_cara
@@ -254,7 +254,7 @@ def rotar_imagenes(caras):
             *caras: 4 caras
         *de_cabeza: 0 para proyeccion hacia arriba, 180 para proyeccion hacia abajo
     """     
-    de_cabeza = 0 #para que este de cabeza probar con: 180
+    de_cabeza = 180 #para que este de cabeza probar con: 180
 
     #ROTAR .---esto se podria paralelizar.. se demora unos 0.03 seg --fijo
     nuevas_caras = list()
@@ -281,6 +281,7 @@ def split_str(seq, chunk, skip_tail=False):
     elif not skip_tail and seq:
         lst.extend([seq])
     return lst
+
 
 #####-------CODIGO PARA MOVER-----------------------
 name_image = raw_input("Nombre de imagen GIF: ")
@@ -414,24 +415,36 @@ while(True):
         for cara in caras:
             print texto_proyeccion
 
+            imagen_texto = Image.new('RGB', cara.size,'black')
             fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',15)
-            draw = ImageDraw.Draw(cara)
+
+            draw = ImageDraw.Draw(imagen_texto)
             w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
 
-            if w_draw > cara.size[0]: #subdividir en textos
-                veces = w_draw/cara.size[0]
+            if w_draw > imagen_texto.size[0]: #subdividir en textos
+                veces = w_draw/imagen_texto.size[0]
 
                 nuevo_string = split_str(texto_proyeccion,len(texto_proyeccion)/(veces+1))
                 texto_proyeccion = '\n'.join(nuevo_string)
                 w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
 
-            pos = ( (cara.size[0] - w_draw)/2, 0)
+            pos = ( (imagen_texto.size[0] - w_draw)/2, 0)
             draw.text(pos, texto_proyeccion,font=fnt, fill='white')
 
-            #draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
-            del draw
-        del texto_proyeccion
+            #para el efecto espejo del texto 
+            imagen_texto = ImageOps.mirror(imagen_texto)
 
+            nueva_cara = ImageChops.add(imagen_texto,cara) #probar add_modulo
+
+            #actualizar referencia
+            caras[caras.index(cara)] = nueva_cara
+    
+            #draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
+            cara.close()
+            imagen_texto.close()
+            del draw
+
+        del texto_proyeccion
 
     tiempo_rotar = time.time()
     #ROTAR
