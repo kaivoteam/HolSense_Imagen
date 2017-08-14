@@ -254,7 +254,7 @@ def rotar_imagenes(caras):
             *caras: 4 caras
         *de_cabeza: 0 para proyeccion hacia arriba, 180 para proyeccion hacia abajo
     """     
-    de_cabeza = 180 #para que este de cabeza probar con: 180
+    de_cabeza = 0 #para que este de cabeza probar con: 180
 
     #ROTAR .---esto se podria paralelizar.. se demora unos 0.03 seg --fijo
     nuevas_caras = list()
@@ -407,7 +407,7 @@ while(True):
 
     tiempo_zoom = time.time()
     tamanno_mascara = min(mascara.size)
-    redimensionar_zoom(caras,tamanno_mascara,zoom)
+    redimensionar_zoom(caras,tamanno_mascara,zoom) #quizas ver esto que devuelva otra cosa
     print "TIEMPO DEMORADO EN ZOOM: ",time.time()-tiempo_zoom
 
     #agregar texto (**EXTRA**)
@@ -416,7 +416,7 @@ while(True):
             print texto_proyeccion
 
             imagen_texto = Image.new('RGB', cara.size,'black')
-            fnt = ImageFont.truetype('/Pillow/Tests/fonts/FreeMono.ttf',15)
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
 
             draw = ImageDraw.Draw(imagen_texto)
             w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
