@@ -1,98 +1,7 @@
-from PIL import Image, ImageFile, ImageChops
+from PIL import Image, ImageFile, ImageChops,ImageOps
 import time
 import numpy as np
 
-# write GIF animation
-from PIL.GifImagePlugin import _imaging_gif, RAWMODE, _convert_mode, getheader, getdata, get_interlace, _get_local_header
-
-def save_sequence(ims, filename):
-    im = ims[0]
-    fp = open(filename, 'wb')
-
-    if hasattr(im, 'encoderinfo'):
-        im.encoderinfo.update(im.info)
-    if _imaging_gif:
-        # call external driver
-        try:
-            _imaging_gif.save(im, fp, filename)
-            return
-        except IOError:
-            pass  # write uncompressed file
-
-    if im.mode in RAWMODE:
-        im_out = im.copy()
-    else:
-        im_out = _convert_mode(im, True)
-
-    # header
-    if hasattr(im, 'encoderinfo'):
-        try:
-            palette = im.encoderinfo["palette"]
-        except KeyError:
-            palette = None
-            im.encoderinfo["optimize"] = im.encoderinfo.get("optimize", True)
-    else:
-        palette = None
-        im.encoderinfo = {}
-
-    save_all = True
-    if save_all:
-        previous = None
-
-        first_frame = None
-        for im_frame in ims:
-            im_frame = _convert_mode(im_frame)
-
-            # To specify duration, add the time in milliseconds to getdata(),
-            # e.g. getdata(im_frame, duration=1000)
-            if not previous:
-                # global header
-                first_frame = getheader(im_frame, palette, im.encoderinfo)[0]
-                first_frame += getdata(im_frame, (0, 0), **im.encoderinfo)
-            else:
-                if first_frame:
-                    for s in first_frame:
-                        fp.write(s)
-                    first_frame = None
-
-                # delta frame
-                delta = ImageChops.subtract_modulo(im_frame, previous.copy())
-                bbox = delta.getbbox()
-
-                if bbox:
-                    # compress difference
-                    for s in getdata(im_frame.crop(bbox),
-                                     bbox[:2], **im.encoderinfo):
-                        fp.write(s)
-                else:
-                    # FIXME: what should we do in this case?
-                    pass
-            previous = im_frame
-        if first_frame:
-            save_all = False
-    if not save_all:
-        header = getheader(im_out, palette, im.encoderinfo)[0]
-        for s in header:
-            fp.write(s)
-
-        flags = 0
-
-        if get_interlace(im):
-            flags = flags | 64
-
-        # local image header
-        _get_local_header(fp, im, (0, 0), flags)
-
-        im_out.encoderconfig = (8, get_interlace(im))
-        ImageFile._save(im_out, fp, [("gif", (0, 0)+im.size, 0,
-                                      RAWMODE[im_out.mode])])
-
-        fp.write(b"\0")  # end of image data
-
-    fp.write(b";")  # end of file
-
-    if hasattr(fp, "flush"):
-        fp.flush()
 def redondear_a_int(numero):
     """ Descripcion:
             Funcion que redondea el numero al entero mas cercano
@@ -362,7 +271,9 @@ for i in range(frames):
 
     if frames == 1: #imagen plana
         for i in range(4): #repeticion de la misma cara
-            caras.append(im.copy())
+            #mirror
+            imagen_espejo = ImageOps.mirror(im.copy())
+            caras.append(imagen_espejo)
     
     if frames > 1: #gif
 
@@ -375,22 +286,22 @@ for i in range(frames):
     mascara = crear_mascara()
 
     tamanno_mascara = min(mascara.size)
-    redimensionar_zoom(caras,tamanno_mascara,zoom=1)
+    redimensionar_zoom(caras,tamanno_mascara,zoom=1.1)
 
     cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras)
 
     imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
 
-    secuencia.append(mascara.copy())
+    secuencia.append(imagen_Final.copy())
     tiempos_crear_frames.append(time.time()-tiempo1)
 
 #mostrar y guardar ultima
-mascara.show()
-mascara.save("imagen.png")
+imagen_Final.show()
+imagen_Final.save("imagen.png")
 
 #guardar secuencia
 if len(secuencia)>1:
-    save_sequence(secuencia, 'out.gif')
+    imagen_Final.save("out.gif", save_all=True, append_images=secuencia,loop=100)
 
 import numpy as np
 print "Demoro %f segundos en promedio por frame"%(np.mean(tiempos_crear_frames))
