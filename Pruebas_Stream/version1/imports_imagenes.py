@@ -4,16 +4,13 @@ import numpy as np
 
 #####-------CODIGO PARA MOVER-----------------------
 #annade: memoria
-def hacer(im,frames,figura, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
-    de_cabeza = 0 #para que este de cabeza probar con: 180
-
-    tamanno_original = min(im.size) 
+def hacer(imagenes,frames,figura, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
 
     ##-----------------CREAR LA IMAGEN (CON MEMORIA UPDATED)---------------
     if memoria: #solo para zoom (utiliza la que tiene en memoria)
         caras = [cara.copy() for cara in caras_memoria] #ya que cada cara es una referencia
     else:
-        caras = cargar_caras(im,current,frames)
+        caras = cargar_caras(imagenes,current,frames)
         
         centrar_4caras(caras) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
@@ -40,8 +37,8 @@ def hacer(im,frames,figura, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
 
     data = np.asarray(imagen_Final)
     figura.set_array(data)
-    
 
+    
 def redondear_a_int(numero):
     """ Descripcion:
             Funcion que redondea el numero al entero mas cercano
@@ -142,8 +139,8 @@ def cargar_caras(im,current,frames):
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
         #print ("para angulo", angulo,"es necesario ir al frame ",frame_angulo)
-        im.seek(frame_angulo-1)
-        nueva_im = im.copy()
+        #im.seek(frame_angulo-1)
+        nueva_im = im[frame_angulo-1].copy()
         
         caras.append(nueva_im) #se ve choro asi ImageChops.invert(imagen_a_guardar)
     return list(caras)
@@ -175,20 +172,31 @@ def trim(imag):
         print "Ocurrio un suceso inesperado"
         return False#imag
 
-primero = True #para mantener el aspecto del primero
+
+ajustar_aspecto = True 
 crop_caras = []
+
+def ajustar_4caras():
+    """ Descripcion:
+            Funcion que cambia las variables globales para ajustar
+            las 4 caras de la imagen proyectada
+    """
+    global ajustar_aspecto,crop_caras
+    ajustar_aspecto = True
+    del crop_caras[:] #vacia la lista
+
 def centrar_4caras(caras): #centra
     """ Descripcion:
             Funcion que centra las 4 caras basado en el trim 
             y rellena la imagen para dejarla cuadrada
     """
-    global primero,crop_caras
+    global ajustar_aspecto,crop_caras
 
     for i in range(len(caras)):
-        cara = caras[i]
+        cara = caras[i].copy()
 
-        if primero:
-            crop_caras.append(trim(cara))
+        if ajustar_aspecto: #guarda las dimensiones para centrar de la primera cara
+            crop_caras.append(trim(cara)) #para mantener el aspecto del primero
         dimensiones_trim = crop_caras[i]
 
         nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
@@ -196,7 +204,8 @@ def centrar_4caras(caras): #centra
         #IMAGENES CUADRADAS (rellena para dejar cuadrado) 
         if nueva_cara.size[0] != nueva_cara.size[1]:
             nuevo_size = np.max(nueva_cara.size)
-            imagen_a_guardar = Image.new('RGBA', (nuevo_size,nuevo_size), 'black')
+
+            imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), 'black')
             imagen_a_guardar.paste(nueva_cara, ( (nuevo_size - nueva_cara.size[0]) /2, (nuevo_size - nueva_cara.size[1])/2 ))
         else:
             imagen_a_guardar = nueva_cara
@@ -204,8 +213,9 @@ def centrar_4caras(caras): #centra
         caras[i].close()
         caras[i] = imagen_a_guardar
 
-    if primero:
-        primero=False
+    if ajustar_aspecto:
+        ajustar_aspecto=False
+
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """ Descripcion:
@@ -242,6 +252,30 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
             y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
 
             nueva_im = nueva_im.crop((x1, x2, y1, y2))
+        """
+        w, h = imagen_a_guardar.size
+        rad = w/3
+        circle = Image.new('L', (rad * 2, rad * 2), 0)
+        draw = ImageDraw.Draw(circle)
+        draw.ellipse((0, 0, rad * 2, rad * 2), fill=255)
+        alpha = Image.new('L', imagen_a_guardar.size, 255)
+        alpha.paste(circle.crop((0, 0, rad, rad)), (0, 0))
+        alpha.paste(circle.crop((0, rad, rad, rad * 2)), (0, h - rad))
+        alpha.paste(circle.crop((rad, 0, rad * 2, rad)), (w - rad, 0))
+        alpha.paste(circle.crop((rad, rad, rad * 2, rad * 2)), (w - rad, h - rad))
+        imagen_a_guardar.putalpha(alpha)
+        #imagen_a_guardar.show()
+        #asd  
+
+                    bigsize = (im.size[0] * 3, im.size[1] * 3)
+
+            mask = Image.new('L', bigsize, 0)
+            draw = ImageDraw.Draw(mask) 
+            draw.ellipse((0, 0) + bigsize, fill=255)
+            mask = mask.resize(imagen_a_guardar.size, Image.ANTIALIAS)
+
+            imagen_a_guardar.putalpha(mask)
+        """
 
         caras[i].close()
         caras[i] = nueva_im
@@ -269,5 +303,5 @@ def crear_mascara():
             Funcion que crea la mascara
         *w,h: dimensiones para crear la mascara
     """
-    w,h =  854,480#1280,720 # #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
-    return Image.new('RGB', (w,h),'black')
+    w,h =  1280,720 #854,480 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
+    return Image.new('RGB', (w,h), 'black')

@@ -148,21 +148,21 @@ def centrar_4caras_nuevo(caras): #ver esto...
         caras[i].close()
         caras[i] = nueva_cara
 
-primero = True #para mantener el aspecto del primero
-crop_caras = []
+#primero = True #para mantener el aspecto del primero
+#crop_caras = []
 def centrar_4caras(caras): #centra
     """ Descripcion:
             Funcion que centra las 4 caras basado en el trim 
             y rellena la imagen para dejarla cuadrada
     """
-    global primero,crop_caras
+    #global primero,crop_caras
 
     for i in range(len(caras)):
         cara = caras[i]
 
-        if primero:
-            crop_caras.append(trim(cara))
-        dimensiones_trim = crop_caras[i]
+        #if primero:
+        #    crop_caras.append(trim(cara))
+        dimensiones_trim = trim(cara)#crop_caras[i]
 
         nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
 
@@ -177,8 +177,8 @@ def centrar_4caras(caras): #centra
         caras[i].close()
         caras[i] = imagen_a_guardar
 
-    if primero:
-        primero=False
+    #if primero:
+    #    primero=False
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """ Descripcion:
@@ -286,7 +286,7 @@ for i in range(frames):
     mascara = crear_mascara()
 
     tamanno_mascara = min(mascara.size)
-    redimensionar_zoom(caras,tamanno_mascara,zoom=1.1)
+    redimensionar_zoom(caras,tamanno_mascara,zoom=2)
 
     cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras)
 
@@ -301,7 +301,7 @@ imagen_Final.save("imagen.png")
 
 #guardar secuencia
 if len(secuencia)>1:
-    imagen_Final.save("out.gif", save_all=True, append_images=secuencia,loop=100)
+    imagen_Final.save("out.gif", save_all=True, append_images=secuencia,loop=100,duration=80)
 
 import numpy as np
 print "Demoro %f segundos en promedio por frame"%(np.mean(tiempos_crear_frames))

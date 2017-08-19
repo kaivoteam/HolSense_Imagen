@@ -1,7 +1,4 @@
-Imagenes giran hacia la derecha
-primera cara qu ese ve es la izquierda
-
-imagenes cuadradas, sino las corta
+mov derecha-> el objeto gira hacia la derecha.. (se ve su izquierda)
 
 caras4_frame.py // tiene funciones para realizar los movimientos (ademas de las variables globales que se supone qu estaran definidas)
 
@@ -12,8 +9,16 @@ mover_imagen_gif.py //mueve imagen a traves de gif ya creado
 funcional.py //(codigo para realizar las pruebas)
 
 con imagenes de 320x320 anda super bien (rapido)
-con 640x640 sube un poco
+con 640x640 sube un poco pero mejor calidad
 
 tiempo aumenta si se tiene una imagen de mayor tamanno (si se hace zoom igual)
+
+
+definir un diccionario hacia donde gira la imagen (Derecha o izquierda) 
+**preferencial:derecha
+
+recordar que si agrego algo a la imagen... meterle el efecto mirror
+
+Todo es alrevez... rotar igual..-->> verificar todo en las pruebas y correccion.. con decabeza y eso
 
 

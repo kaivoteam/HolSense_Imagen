@@ -89,8 +89,7 @@ def posicionar_imagen(imagen,cara_frente,cara_izquierda,cara_derecha,cara_atras)
 
 ##-----------------CREAR LA IMAGEN---------------
 #4 imagenes en 4 angulos
-angulos = [0.0, 90.0, 180.0, 270.0]
-def cargar_caras(im,current,frames):
+def cargar_caras(im,current,frames,giro_imagen_gif_derecha=True):
     """ Descripcion:
             Funcion que carga las 4 caras de la imagen y las devuelve en una lista
 
@@ -98,8 +97,14 @@ def cargar_caras(im,current,frames):
             *im: imagen
             *current: actual frame
             *frames: cantidad de frames de la imagen
+            *giro_imagen_gif_derecha: booleano indicando si el gif gira hacia la derecha
     """
-    global angulos
+
+    if giro_imagen_gif_derecha: #si gif gira a la derecha
+        #por efecto mirrro queda alrevez 
+        angulos = [0.0, 270.0, 90.0, 180.0] #frente, derecha, izq, atras
+    else: #si gif gira a la izquierda
+        angulos = [0.0, 90.0, 270.0, 180.0] #frente, derecha, izq, atras
 
     caras = []
     for angulo in angulos: #extraer 4 angulos a partir del current
@@ -246,23 +251,36 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
         caras[i].close()
         caras[i] = nueva_im
 
-def rotar_imagenes(caras):
+def rotar_imagenes(caras,rotacion=0):
     """ Descripcion:
-            Funcion que rota las 4 caras
+            Funcion que rota las 4 caras para dejarlas en 4 posiciones en la imagen
 
         Args:
             *caras: 4 caras
+            *rotacion: nueva opcion agregada que rota el objeto respecto al plano
         *de_cabeza: 0 para proyeccion hacia arriba, 180 para proyeccion hacia abajo
     """     
     de_cabeza = 0 #para que este de cabeza probar con: 180
 
     #ROTAR .---esto se podria paralelizar.. se demora unos 0.03 seg --fijo
     nuevas_caras = list()
-    nuevas_caras.append( caras[0].rotate(180+de_cabeza) )#,expand=True) )
-    nuevas_caras.append( caras[1].rotate(90+de_cabeza) )#,expand=True) )
-    nuevas_caras.append( caras[2].rotate(270+de_cabeza) )#,expand=True)
-    nuevas_caras.append( caras[3].rotate(0+de_cabeza) )#,expand=True)
+
+    #actualizacion en rotar por efecto espejo
+    if de_cabeza == 180:
+        nuevas_caras.append( caras[3].rotate(180+de_cabeza+rotacion)) #,expand=True) )  #cara frente
+    else:
+        nuevas_caras.append( caras[0].rotate(180+rotacion)) #,expand=True) )  #cara frente
+
+    nuevas_caras.append( caras[1].rotate(270 +de_cabeza+rotacion)) #,expand=True) )  #cara der
+    nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion)) #,expand=True))   #cara izq
+
+    #actualizacion en rotar por efecto espejo
+    if de_cabeza == 180:
+        nuevas_caras.append( caras[0].rotate(0+de_cabeza+rotacion))#,expand=True))      #cara atras
+    else:
+        nuevas_caras.append( caras[3].rotate(0+rotacion))#,expand=True))      #cara atras
     return nuevas_caras
+
 
 def crear_mascara():
     """ Descripcion:
@@ -293,22 +311,27 @@ print(im.format, im.size, im.mode)
 frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
 print "La imagen tiene %d frames"%(frames)
 
+giro_imagen_gif_derecha = True         
+#para organo si (calibracion en base al giro por defecto de la imagen)
+#para salto no (false)
+
 #probar de esta manera x mientras...
 import sys
-todos_frames = [f.copy() for f in ImageSequence.Iterator(im)]
+todos_frames = [ImageOps.mirror(f) for f in ImageSequence.Iterator(im)]
 im.close()
 print "tmanno de la imagen leida " ,sys.getsizeof(im)
 print "tmaanno de la imagen en formato lista ", sys.getsizeof(todos_frames)
 
 #Movimiento de la imagen a traves de actual
-current = 0 #frame en el momento (actual)
+current = 0 #frame en el momento (actual)--asociado al giro
 zoom = 1.0  #zoom en el momento (actual)
+rotacion = 0 #grado de rotacion (actual)
 
 #--> MOSTRAR LA PRIMERA IMAGEN SIN REALIZAR NINGUNA ACCION
 
 #con memoria (Si no realiza mov)
 #Preproceso: Cargar->Centrar->rellenar->zoom
-caras_memoria = cargar_caras(todos_frames,current,frames) #para que zoom sea mas rapido
+caras_memoria = cargar_caras(todos_frames,current,frames,giro_imagen_gif_derecha) #para que zoom sea mas rapido
 centrar_4caras(caras_memoria) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
 print "tamanno de caras ",sys.getsizeof(caras_memoria)
@@ -332,36 +355,44 @@ while(True):
         mostrar_primera=False
 
     else:
-        opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n5 Centrar\n6 Agregar texto\n")
+        opcion = raw_input("Girar: \n1 Derecha \n2 Izquierda \nZoom:\n3 Zoom in \n4 Zoom out\nRotar:\n5 Horario \n6 Antihorario \n7 Centrar\n8 Agregar texto\n")
 
     start_time = time.time()
 
-    #asignar cantidad de mov
-    #asignar un zoom maximo y zoom minimo
+    #CLIENTE MANDAA EL MENSAJE -> OPCION + CANTIDAD
 
-    if opcion == '1': # movimiento derecha
-        current +=1 %frames
+    ##MAPEA LA OPERACION A LAS VARIABLES NECESARIAS
+    if opcion == '1': # movimiento girar derecha
+        giro_derecha = True
+        cantidad = 1
 
-    elif opcion == '2': #movimiento izquierda
-        current -=1 %frames
-        if current <0: #ya que solo va en numeros positivos
-            current += frames
+    elif opcion == '2': #movimiento girar izquierda
+        giro_derecha = False
+        cantidad = 1
 
     elif opcion == '3': #hacer zoom
-        zoom+=0.1 #calibrar
+        zoom_in = True
+        cantidad = 0.1
 
     elif opcion == '4': #quitar zoom
-        zoom-=0.1
+        zoom_in = False
+        cantidad = 0.1
+
+    elif opcion== '5': #rotar horario
+        rotar_horario = True
+        cantidad = 15 #grados
+
+    elif opcion == '6': #rotar antihorario
+        rotar_horario =False
+        cantidad = 15 #grados
 
     ##FUNCIONES EXTRA AGREGADAS...
-    elif opcion == '5': #calibrar
+    elif opcion == '7': #calibrar
         print "funcion activada necesarioa agregarlo"
         ajustar_4caras() #ajusta para que la proxima cara mostrada este centrada
 
-        #quizas falta agregar mostrar la cara centrada?
-
         #continue
-    elif opcion == '6':
+    elif opcion == '8':
         texto_proyeccion = raw_input("Ingrese texto: ")
 
     elif opcion == 'algo':
@@ -370,10 +401,54 @@ while(True):
         print("Movimiento invalido")
         continue
 
-    if opcion == '3' or opcion == '4':
+    #**************configuracion de la operacion*******************
+
+    if opcion == '1' or opcion == '2': #funcion giro
+        funcion_giro = True
+    else:
+        funcion_giro = False
+
+    if opcion == '3' or opcion == '4': #solo zoom
+        funcion_zoom = True
         memoria = True
     else:
+        funcion_zoom = False
         memoria = False
+
+    if opcion == '5' or opcion == '6': #funcion rotar (Tambien tiene memoria)
+        funcion_rotar = True
+        memoria =True
+    else:
+        memoria = False
+        funcion_rotar = False
+
+    #TODO LO DE ARRIBA (HASTA EL WHILE) ES EL MENSAJE QUE MANDA EL CLIENTE 
+    #TODO LO DE ABAJO ES LA OPERACION REALIZADA POR EL SERVER
+
+    ##COMIENZA EL PROCESO. -------ASIGNAR MOVIMIENTO--------
+
+    if funcion_giro:
+        if not giro_imagen_gif_derecha: #gif gira a izquierda
+            giro_derecha = not giro_derecha
+
+        ##asignar movimiento
+        if giro_derecha:       #derecha
+            current-=cantidad
+        elif not giro_derecha: #izquierda
+            current+=cantidad
+        current = current%frames
+
+    if funcion_zoom:
+        if zoom_in:
+            zoom += cantidad
+        else:
+            zoom -=cantidad
+
+    if funcion_rotar:
+        if rotar_horario:
+            rotacion += cantidad #grados
+        else:
+            rotacion -= cantidad
 
     ##-----------------CREAR LA IMAGEN (CON MEMORIA---------------
     if memoria and not ajustar_aspecto: #si es que no ha centrado (ajustar aspecto agregado)
@@ -386,7 +461,7 @@ while(True):
         tiempo_cargar = time.time()
 
         ####-----------PREPROCESAR (CENTrAR + RELLENAR)---------------------
-        caras = cargar_caras(todos_frames,current,frames)
+        caras = cargar_caras(todos_frames,current,frames,giro_imagen_gif_derecha)
 
         centrar_4caras(caras) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
@@ -416,7 +491,7 @@ while(True):
             print texto_proyeccion
 
             imagen_texto = Image.new('RGB', cara.size,'black')
-            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',10)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
 
             draw = ImageDraw.Draw(imagen_texto)
             w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
@@ -429,7 +504,10 @@ while(True):
                 w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
 
             pos = ( (imagen_texto.size[0] - w_draw)/2, 0)
+
             draw.text(pos, texto_proyeccion,font=fnt, fill='white')
+            draw.text((pos[0]+1,pos[1]+1), texto_proyeccion,font=fnt, fill='white')
+            #draw.text((pos[0]-1,pos[1]-1), texto_proyeccion,font=fnt, fill='white')
 
             #para el efecto espejo del texto 
             imagen_texto = ImageOps.mirror(imagen_texto)
@@ -448,7 +526,7 @@ while(True):
 
     tiempo_rotar = time.time()
     #ROTAR
-    cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras)
+    cara_frente,cara_derecha,cara_izquierda,cara_atras = rotar_imagenes(caras,rotacion)
     print "TIEMPO EN ROTAR: ",time.time()-tiempo_rotar
 
     #data = np.asarray(cara_frente,dtype='int32')

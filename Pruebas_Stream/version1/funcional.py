@@ -1,10 +1,11 @@
 import time
-from PIL import Image, ImageFile, ImageChops,ImageOps
+from PIL import Image, ImageFile, ImageChops,ImageOps,ImageSequence
 
 from imports_imagenes import * #del codigo imports_imagenes.py
 
 import time
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
@@ -47,13 +48,12 @@ def funcion_principal(i):
     else:
     	memoria = False
 
-    global caras_memoria #se modifica por referencia
-    hacer(im, frames,figura,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
-	
-	#asi estaba antes
-	#hacer(im, frames, angulos,figura,current,zoom) ##funcion dentro de imports_imagenes
+    global caras_memoria,todos_frames,figura #se modifica por referencia
+    hacer(todos_frames, frames,figura,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
 
     print "Demoro %f segundos en total"%(time.time() - start_time)
+
+    return figura,
 
 if __name__ == "__main__":
     ##------------------DATOS NECESARIOS-----------------------------
@@ -67,6 +67,9 @@ if __name__ == "__main__":
 
     frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
     print "La imagen tiene %d frames"%(frames)
+
+    todos_frames = [ImageOps.mirror(f) for f in ImageSequence.Iterator(im)]
+    im.close()
     ##------------------DATOS NECESARIOS-----------------------------
 
 
@@ -75,7 +78,7 @@ if __name__ == "__main__":
     zoom = 1.0  #zoom en el momento (actual)
 
     #esto se annade por la memoria del archivo
-    caras_memoria = cargar_caras(im,current,frames)
+    caras_memoria = cargar_caras(todos_frames,current,frames)
     centrar_4caras(caras_memoria)
 
     #antes aca iba while
@@ -90,10 +93,18 @@ if __name__ == "__main__":
 
     data = np.asarray(imagen_Final)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    figura = ax.imshow(data, animated=True)
-    #hacer(im, frames,figura,current,zoom,memoria=False)
 
-    ani = animation.FuncAnimation(fig,funcion_principal,interval=0) #esta funcion hace el loop
+    fig, ax = plt.subplots()
+    figura = ax.imshow(data, animated=True)
+
+    #plt.show()
+    #hacer(im, frames,figura,current,zoom,memoria=False)
+    #app = QtGui.QApplication(sys.argv)
+    #plt.ion()
+    #plt.close()
+    if matplotlib.__version__ == '2.0.2':
+        ani = animation.FuncAnimation(fig, funcion_principal, interval=0, blit=True)
+    else:
+        ani = animation.FuncAnimation(fig,funcion_principal,interval=0) #esta funcion hace el loop
     plt.show()
+    #sys.exit(app.exec_())
