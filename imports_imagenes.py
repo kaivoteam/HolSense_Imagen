@@ -1,43 +1,205 @@
+from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw,ImageFont,  ImageSequence
+
 import time
-from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw,ImageFont
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import animation
+
+##ejecutar esto en un proceso para que se guarden las variables...
+
+##------------------DATOS NECESARIOS-----------------------------
+frames = 0
+imagen_trabajada = None
+
+#Movimiento de la imagen a traves de actual
+current = 0 #frame en el momento (actual)
+zoom = 1.0  #zoom en el momento (actual)
+rotacion = 0 #grado de rotacion (actual)
+
+caras_memoria= None #se guarda en server
+
+#definir en base al diccionario
+giro_imagen_gif_derecha = True
+
+
+def inicializar(nombre_imagen):
+    global frames,imagen_trabajada,caras_memoria,current,zoom,rotacion
+
+    im = Image.open("./imagenes/"+nombre_imagen+".gif")
+    print(im.format, im.size, im.mode)
+
+    frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
+
+    imagen_trabajada = [ImageOps.mirror(f) for f in ImageSequence.Iterator(im)]
+    im.close()
+
+    caras_memoria = cargar_caras(imagen_trabajada,current,frames)
+    centrar_4caras(caras_memoria)
+
+    mascara = crear_mascara()
+    tamanno_mascara = min(mascara.size)
+
+    redimensionar_zoom(caras_memoria,tamanno_mascara,zoom)
+    cara_frente,cara_derecha,cara_izquierda,cara_atras = rotar_imagenes(caras_memoria,rotacion)
+    imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
+
+    imagen_Final.show()
+
 
 #####-------CODIGO PARA MOVER-----------------------
-#annade: memoria
-def hacer(im,frames, current=0,zoom=1.0,memoria=False,caras_memoria=[]):
-    de_cabeza = 0 #para que este de cabeza probar con: 180
+def hacer(opcion,cantidad,texto_proyectar=""):
+    global current,zoom,rotacion,giro_imagen_gif_derecha,frames
+    #definir cual es el mensaje de "opcion" que se manda
 
-    tamanno_original = min(im.size) 
+    memoria = True
+    limite = False
 
-    ##-----------------CREAR LA IMAGEN (CON MEMORIA UPDATED)---------------
-    if memoria: #solo para zoom (utiliza la que tiene en memoria)
+    ##MAPEA LA OPERACION A LAS VARIABLES NECESARIAS
+    funcion_giro = False
+    funcion_zoom = False
+    funcion_rotar = False
+    if opcion == '1': # movimiento girar viendo la derecha del oobjeto
+        funcion_giro = True
+        giro_derecha = True
+        memoria = False
+
+    elif opcion == '2': #movimiento gira viendo la izquierda del objeto
+        funcion_giro = True
+        giro_derecha = False
+        memoria = False
+
+    elif opcion == '3': #hacer zoom
+        funcion_zoom = True
+        zoom_in = True
+
+    elif opcion == '4': #quitar zoom
+        funcion_zoom = True
+        zoom_in = False
+
+    elif opcion== '5': #rotar horario
+        funcion_rotar = True
+        rotar_horario = True
+
+    elif opcion == '6': #rotar antihorario
+        funcion_rotar = True
+        rotar_horario =False
+
+    ##COMIENZA EL PROCESO. -------ASIGNAR MOVIMIENTO--------
+    if funcion_giro:
+        if not giro_imagen_gif_derecha: #gif gira a izquierda
+            giro_derecha = not giro_derecha
+
+        ##asignar movimiento
+        if giro_derecha:       #derecha
+            current-=cantidad
+        elif not giro_derecha: #izquierda
+            current+=cantidad
+        current = current%frames
+
+    if funcion_zoom:
+        if zoom_in:
+            zoom += cantidad
+        else:
+            zoom -=cantidad
+
+        #tamanno maximo permitido (calibrar)
+        tamanno_mascara = tamanno_mascara_min()
+        tamanno_actual = int( aspecto_normal(tamanno_mascara) * zoom )
+        if zoom <= 0 or tamanno_actual <= 20: #tamano minimo permitido
+            limite = True
+            #remueve el zoom aplicado
+            zoom+=cantidad
+        elif tamanno_actual >= 1000: #tamanno maximo permitido
+            limite=True
+            #remueve el zoom aplicado
+            zoom-=cantidad
+
+    if funcion_rotar:
+        if rotar_horario:
+            rotacion += cantidad #grados
+        else:
+            rotacion -= cantidad
+
+    realizar_operacion(current,zoom,rotacion,memoria,limite,texto_proyectar)
+
+
+def realizar_operacion(current=0,zoom=1.0,rotacion=0,memoria=False,limite=False,texto_proyectar=""):
+    global imagen_trabajada,caras_memoria,frames,giro_imagen_gif_derecha #variables almacenadas
+
+    ##-----------------CREAR LA IMAGEN (CON MEMORIA---------------
+    if memoria and not ajustar_aspecto: #si es que no ha centrado (ajustar aspecto agregado)
+        #solo para zoom (utiliza la que tiene en memoria)
         caras = [cara.copy() for cara in caras_memoria] #ya que cada cara es una referencia
-    else:
-        caras = cargar_caras(im,current,frames)
-        
-        centrar_4caras(caras) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
+    else: #CARGAR nueva imagen y preprocesar -->> juntar cargar + centar + rellenar
+        caras = cargar_caras(imagen_trabajada,current,frames,giro_imagen_gif_derecha)
+        centrar_4caras(caras) #con respecto al objeto (bbox) --solo cambia con derech e izq
 
         #---ACTUALIZA CARAS_MEMORIA POR REFERENCIa----
         #borrar referencia vieja
         for cara in caras_memoria:
             cara.close()
-            del cara
-        #vacia la lista
-        del caras_memoria[:] 
-        #actualizar
-        caras_memoria += [cara.copy() for cara in caras]
+        del caras_memoria[:] #vacia la lista
+        caras_memoria += [cara.copy() for cara in caras] #actualizar
 
-
+    ##------------------PREPROCESAR CARAS (CENTRAR, RELLENAR, REDIMENSIONAR( + ajuste ZOOM) y ROTAR)----------------------------
     mascara = crear_mascara()
 
     tamanno_mascara = min(mascara.size)
-    redimensionar_zoom(caras,tamanno_mascara,zoom)
+    redimensionar_zoom(caras,tamanno_mascara,zoom) #quizas ver esto que devuelva otra cosa
 
-    cara_frente,cara_izquierda,cara_derecha,cara_atras = rotar_imagenes(caras)
+    #agregar texto (**EXTRA**) --tambien para mensaje advertencia
+    if limite:
+        texto_proyectar = "!"
+
+    if texto_proyectar != "": #texto
+        for cara in caras:
+
+            imagen_texto = Image.new('RGB', cara.size,'black')
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',20)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
+
+            draw = ImageDraw.Draw(imagen_texto)
+            w_draw, h_draw = draw.textsize(texto_proyectar,font=fnt)
+
+            if w_draw > imagen_texto.size[0]: #subdividir en textos
+                veces = w_draw/imagen_texto.size[0]
+
+                nuevo_string = split_str(texto_proyectar,len(texto_proyectar)/(veces+1))
+                texto_proyectar = '\n'.join(nuevo_string)
+                w_draw, h_draw = draw.textsize(texto_proyectar,font=fnt)
+
+            if limite: #texto de advertencia en la esquina
+                pos = ( w_draw/2 , 0)
+            else:
+                pos = ( (aspecto_normal(tamanno_mascara) - w_draw)/2, 0)
+
+            draw.text(pos, texto_proyectar,font=fnt, fill='white')
+            draw.text((pos[0]+1,pos[1]+1), texto_proyectar,font=fnt, fill='white')
+            #draw.text((pos[0]-1,pos[1]-1), texto_proyectar,font=fnt, fill='white')
+
+            #para el efecto espejo del texto 
+            imagen_texto = ImageOps.mirror(imagen_texto)
+
+            nueva_cara = ImageChops.add(imagen_texto,cara) #probar add_modulo
+
+            #actualizar referencia
+            caras[caras.index(cara)] = nueva_cara
+    
+            cara.close()
+            imagen_texto.close()
+            del draw
+
+        del texto_proyectar
+        #if 'texto_advertencia' in locals():
+         #   del texto_advertencia  #probar limite cambiar a false
+
+
+    cara_frente,cara_derecha,cara_izquierda,cara_atras = rotar_imagenes(caras,rotacion)
 
     imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
+
     imagen_Final.show()
+
 
 def redondear_a_int(numero):
     """ Descripcion:
@@ -68,7 +230,6 @@ def angulo_a_frame(angulo,frames):
     """
     return redondear_a_int( float(angulo) * frames / 360.0)
 
-#caracteristicas de calibracion
 def aspecto_normal(tamanno):
     """ Descripcion:
             Funcion que calcula el aspecto normal de la imagen (basado en dimensiones fijas)
@@ -77,8 +238,7 @@ def aspecto_normal(tamanno):
             *tamanno: tamanno real de la imagen
         *delta: la cantidad de espacio extra fuera de la imagen, para que no quede pegada a los bordes
     """
-    delta = redondear_a_int(tamanno/40.0) #delta fijo
-    #delta = redondear_a_int(0.3*40.0) #delta fijo
+    delta = redondear_a_int(tamanno/40.0) #delta fijo (paso la aprobacion del equipo)
     return redondear_a_int(tamanno/3.0 - delta) 
 
 def posicionar_imagen(imagen,cara_frente,cara_izquierda,cara_derecha,cara_atras):
@@ -122,25 +282,29 @@ def posicionar_imagen(imagen,cara_frente,cara_izquierda,cara_derecha,cara_atras)
     return imagen
 
 ##-----------------CREAR LA IMAGEN---------------
-#4 imagenes en 4 angulos
-angulos = [0.0, 90.0, 180.0, 270.0]
-def cargar_caras(im,current,frames):
+def cargar_caras(todos_frames,current,frames,giro_imagen_gif_derecha=True):
     """ Descripcion:
             Funcion que carga las 4 caras de la imagen y las devuelve en una lista
+            en orden de: cara frente, cara derecha, cara izquierda y cara atras
 
         Args:
-            *im: imagen
+            *todos_frames: todos los frames de la imagen (en una lista)
             *current: actual frame
             *frames: cantidad de frames de la imagen
+            *giro_imagen_gif_derecha: booleano indicando si el gif gira hacia la derecha
     """
-    global angulos
+
+    if giro_imagen_gif_derecha: #si gif gira a la derecha
+        #por efecto mirrro queda alrevez 
+        angulos = [0.0, 270.0, 90.0, 180.0] #frente, derecha, izq, atras
+    else: #si gif gira a la izquierda
+        angulos = [0.0, 90.0, 270.0, 180.0] #frente, derecha, izq, atras
 
     caras = []
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
         #print ("para angulo", angulo,"es necesario ir al frame ",frame_angulo)
-        im.seek(frame_angulo-1)
-        nueva_im = im.copy()
+        nueva_im = todos_frames[frame_angulo-1].copy()
         
         caras.append(nueva_im) #se ve choro asi ImageChops.invert(imagen_a_guardar)
     return list(caras)
@@ -151,7 +315,7 @@ def trim(imag):
 
         *delta: Es el espacio extra anndido alrededor del bbox
     """
-    delta = np.min(imag.size)/5 #calibrar esto
+    delta = np.min(imag.size)/5 #calibrar esto (paso aprobacion del equipo)
 
     bg = Image.new(imag.mode,imag.size,imag.getpixel((0,0)))
     diff = ImageChops.difference(imag,bg)
@@ -172,20 +336,31 @@ def trim(imag):
         print "Ocurrio un suceso inesperado"
         return False#imag
 
-primero = True #para mantener el aspecto del primero
+
+ajustar_aspecto = True 
 crop_caras = []
+
+def ajustar_4caras():
+    """ Descripcion:
+            Funcion que cambia las variables globales para ajustar
+            las 4 caras de la imagen proyectada
+    """
+    global ajustar_aspecto,crop_caras
+    ajustar_aspecto = True
+    del crop_caras[:] #vacia la lista
+
 def centrar_4caras(caras): #centra
     """ Descripcion:
             Funcion que centra las 4 caras basado en el trim 
             y rellena la imagen para dejarla cuadrada
     """
-    global primero,crop_caras
+    global ajustar_aspecto,crop_caras
 
     for i in range(len(caras)):
-        cara = caras[i]
+        cara = caras[i].copy()
 
-        if primero:
-            crop_caras.append(trim(cara))
+        if ajustar_aspecto: #guarda las dimensiones para centrar de la primera cara
+            crop_caras.append(trim(cara)) #para mantener el aspecto del primero
         dimensiones_trim = crop_caras[i]
 
         nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
@@ -193,7 +368,8 @@ def centrar_4caras(caras): #centra
         #IMAGENES CUADRADAS (rellena para dejar cuadrado) 
         if nueva_cara.size[0] != nueva_cara.size[1]:
             nuevo_size = np.max(nueva_cara.size)
-            imagen_a_guardar = Image.new('RGBA', (nuevo_size,nuevo_size), 'black')
+
+            imagen_a_guardar = Image.new('RGB', (nuevo_size,nuevo_size), 'black')
             imagen_a_guardar.paste(nueva_cara, ( (nuevo_size - nueva_cara.size[0]) /2, (nuevo_size - nueva_cara.size[1])/2 ))
         else:
             imagen_a_guardar = nueva_cara
@@ -201,8 +377,9 @@ def centrar_4caras(caras): #centra
         caras[i].close()
         caras[i] = imagen_a_guardar
 
-    if primero:
-        primero=False
+    if ajustar_aspecto:
+        ajustar_aspecto=False
+
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """ Descripcion:
@@ -216,20 +393,20 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """
     #nuevo tamanno
     tamanno_actual = int( aspecto_normal(tamanno_mascara) * zoom )
-    
+
     for i in range(len(caras)): ##---esto se podria paralelizar....
         nueva_im = caras[i].copy()
             
         #REDIMENSIONAR --fijo
-        if nueva_im.size[0] >= tamanno_actual : 
-            nueva_im.thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
+        if nueva_im.size[0] >= tamanno_actual : #si tamanno es menor
+            #si se ve muy mal probar Antialias
+            nueva_im.thumbnail((tamanno_actual,tamanno_actual),Image.BICUBIC) #cara frente
+            #thumbnail es un resize manteniendo su aspecto
         else:  #si el zoom supera el tamanno actual de la imagen
             nueva_im = nueva_im.resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
 
         ##---------------------------AJUSTAR---------------
         if zoom > 1: #si se sale de los limites del ratio base
-            #definir un zoom maximo ya que se ve mal si se hace mucho zoom
-            # se pierde la imagen la calidad de la imagen
 
             #tamanno seria de tamanno_actual*aspecto_normal para manternerlo
             tamanno = aspecto_normal(tamanno_mascara)
@@ -239,27 +416,45 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
             y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
 
             nueva_im = nueva_im.crop((x1, x2, y1, y2))
+        elif zoom <1:
+
+            imagen_fondo = Image.new('RGB', (aspecto_normal(tamanno_mascara),aspecto_normal(tamanno_mascara)),'black')
+            imagen_fondo.paste(nueva_im, ((imagen_fondo.size[0] - nueva_im.size[0])/2 ,(imagen_fondo.size[1] - nueva_im.size[1])/2))
+            nueva_im = imagen_fondo
 
         caras[i].close()
         caras[i] = nueva_im
 
-def rotar_imagenes(caras):
+def rotar_imagenes(caras,rotacion=0):
     """ Descripcion:
-            Funcion que rota las 4 caras
+            Funcion que rota las 4 caras para dejarlas en 4 posiciones en la imagen
 
         Args:
             *caras: 4 caras
+            *rotacion: nueva opcion agregada que rota el objeto respecto al plano
         *de_cabeza: 0 para proyeccion hacia arriba, 180 para proyeccion hacia abajo
     """     
     de_cabeza = 0 #para que este de cabeza probar con: 180
-
-    #ROTAR .---esto se podria paralelizar.. se demora unos 0.03 seg --fijo
     nuevas_caras = list()
-    nuevas_caras.append( caras[0].rotate(180+de_cabeza) )#,expand=True) )
-    nuevas_caras.append( caras[1].rotate(90+de_cabeza) )#,expand=True) )
-    nuevas_caras.append( caras[2].rotate(270+de_cabeza) )#,expand=True)
-    nuevas_caras.append( caras[3].rotate(0+de_cabeza) )#,expand=True)
+
+    #Image.BICUBIC es de mejor calidad pero se demora 0.02 (el biblinear se demora la nada)
+
+    #actualizacion en rotar por efecto espejo
+    if de_cabeza == 180:
+        nuevas_caras.append( caras[3].rotate(180+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
+    else:
+        nuevas_caras.append( caras[0].rotate(180+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
+
+    nuevas_caras.append( caras[1].rotate(270 +de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara der
+    nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True))   #cara izq
+
+    #actualizacion en rotar por efecto espejo
+    if de_cabeza == 180:
+        nuevas_caras.append( caras[0].rotate(0+de_cabeza+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
+    else:
+        nuevas_caras.append( caras[3].rotate(0+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
     return nuevas_caras
+
 
 def crear_mascara():
     """ Descripcion:
@@ -267,4 +462,17 @@ def crear_mascara():
         *w,h: dimensiones para crear la mascara
     """
     w,h =  1280,720 #854,480 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
-    return Image.new('RGB', (w,h),'black')
+    return Image.new('RGB', (w,h), 'black')
+
+def tamanno_mascara_min():
+    w,h =  1280,720
+    return min([w,h])
+
+def split_str(seq, chunk, skip_tail=False):
+    lst = []
+    if chunk <= len(seq):
+        lst.extend([seq[:chunk]])
+        lst.extend(split_str(seq[chunk:], chunk, skip_tail))
+    elif not skip_tail and seq:
+        lst.extend([seq])
+    return lst

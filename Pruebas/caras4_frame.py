@@ -34,7 +34,6 @@ def angulo_a_frame(angulo,frames):
     """
     return redondear_a_int( float(angulo) * frames / 360.0)
 
-#caracteristicas de calibracion
 def aspecto_normal(tamanno):
     """ Descripcion:
             Funcion que calcula el aspecto normal de la imagen (basado en dimensiones fijas)
@@ -43,8 +42,7 @@ def aspecto_normal(tamanno):
             *tamanno: tamanno real de la imagen
         *delta: la cantidad de espacio extra fuera de la imagen, para que no quede pegada a los bordes
     """
-    delta = redondear_a_int(tamanno/40.0) #delta fijo
-    #delta = redondear_a_int(0.3*40.0) #delta fijo
+    delta = redondear_a_int(tamanno/40.0) #delta fijo (paso la aprobacion del equipo)
     return redondear_a_int(tamanno/3.0 - delta) 
 
 def posicionar_imagen(imagen,cara_frente,cara_izquierda,cara_derecha,cara_atras):
@@ -88,10 +86,10 @@ def posicionar_imagen(imagen,cara_frente,cara_izquierda,cara_derecha,cara_atras)
     return imagen
 
 ##-----------------CREAR LA IMAGEN---------------
-#4 imagenes en 4 angulos
 def cargar_caras(im,current,frames,giro_imagen_gif_derecha=True):
     """ Descripcion:
             Funcion que carga las 4 caras de la imagen y las devuelve en una lista
+            en orden de: cara frente, cara derecha, cara izquierda y cara atras
 
         Args:
             *im: imagen
@@ -110,7 +108,6 @@ def cargar_caras(im,current,frames,giro_imagen_gif_derecha=True):
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
         #print ("para angulo", angulo,"es necesario ir al frame ",frame_angulo)
-        #im.seek(frame_angulo-1)
         nueva_im = im[frame_angulo-1].copy()
         
         caras.append(nueva_im) #se ve choro asi ImageChops.invert(imagen_a_guardar)
@@ -122,7 +119,7 @@ def trim(imag):
 
         *delta: Es el espacio extra anndido alrededor del bbox
     """
-    delta = np.min(imag.size)/5 #calibrar esto
+    delta = np.min(imag.size)/5 #calibrar esto (paso aprobacion del equipo)
 
     bg = Image.new(imag.mode,imag.size,imag.getpixel((0,0)))
     diff = ImageChops.difference(imag,bg)
@@ -200,20 +197,20 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
     """
     #nuevo tamanno
     tamanno_actual = int( aspecto_normal(tamanno_mascara) * zoom )
-    
+
     for i in range(len(caras)): ##---esto se podria paralelizar....
         nueva_im = caras[i].copy()
             
         #REDIMENSIONAR --fijo
-        if nueva_im.size[0] >= tamanno_actual : 
-            nueva_im.thumbnail((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
+        if nueva_im.size[0] >= tamanno_actual : #si tamanno es menor
+            #si se ve muy mal probar Antialias
+            nueva_im.thumbnail((tamanno_actual,tamanno_actual),Image.BICUBIC) #cara frente
+            #thumbnail es un resize manteniendo su aspecto
         else:  #si el zoom supera el tamanno actual de la imagen
             nueva_im = nueva_im.resize((tamanno_actual,tamanno_actual),Image.ANTIALIAS) #cara frente
 
         ##---------------------------AJUSTAR---------------
         if zoom > 1: #si se sale de los limites del ratio base
-            #definir un zoom maximo ya que se ve mal si se hace mucho zoom
-            # se pierde la imagen la calidad de la imagen
 
             #tamanno seria de tamanno_actual*aspecto_normal para manternerlo
             tamanno = aspecto_normal(tamanno_mascara)
@@ -223,6 +220,11 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
             y1 = y2 = redondear_a_int( (tamanno_actual + tamanno)/2.0 )
 
             nueva_im = nueva_im.crop((x1, x2, y1, y2))
+        elif zoom <1:
+
+            imagen_fondo = Image.new('RGB', (aspecto_normal(tamanno_mascara),aspecto_normal(tamanno_mascara)),'black')
+            imagen_fondo.paste(nueva_im, ((imagen_fondo.size[0] - nueva_im.size[0])/2 ,(imagen_fondo.size[1] - nueva_im.size[1])/2))
+            nueva_im = imagen_fondo
         """
         w, h = imagen_a_guardar.size
         rad = w/3
@@ -261,24 +263,24 @@ def rotar_imagenes(caras,rotacion=0):
         *de_cabeza: 0 para proyeccion hacia arriba, 180 para proyeccion hacia abajo
     """     
     de_cabeza = 0 #para que este de cabeza probar con: 180
-
-    #ROTAR .---esto se podria paralelizar.. se demora unos 0.03 seg --fijo
     nuevas_caras = list()
 
-    #actualizacion en rotar por efecto espejo
-    if de_cabeza == 180:
-        nuevas_caras.append( caras[3].rotate(180+de_cabeza+rotacion)) #,expand=True) )  #cara frente
-    else:
-        nuevas_caras.append( caras[0].rotate(180+rotacion)) #,expand=True) )  #cara frente
-
-    nuevas_caras.append( caras[1].rotate(270 +de_cabeza+rotacion)) #,expand=True) )  #cara der
-    nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion)) #,expand=True))   #cara izq
+    #Image.BICUBIC es de mejor calidad pero se demora 0.02 (el biblinear se demora la nada)
 
     #actualizacion en rotar por efecto espejo
     if de_cabeza == 180:
-        nuevas_caras.append( caras[0].rotate(0+de_cabeza+rotacion))#,expand=True))      #cara atras
+        nuevas_caras.append( caras[3].rotate(180+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
     else:
-        nuevas_caras.append( caras[3].rotate(0+rotacion))#,expand=True))      #cara atras
+        nuevas_caras.append( caras[0].rotate(180+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
+
+    nuevas_caras.append( caras[1].rotate(270 +de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara der
+    nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True))   #cara izq
+
+    #actualizacion en rotar por efecto espejo
+    if de_cabeza == 180:
+        nuevas_caras.append( caras[0].rotate(0+de_cabeza+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
+    else:
+        nuevas_caras.append( caras[3].rotate(0+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
     return nuevas_caras
 
 
@@ -289,7 +291,6 @@ def crear_mascara():
     """
     w,h =  1280,720 #854,480 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
     return Image.new('RGB', (w,h), 'black')
-
 
 def split_str(seq, chunk, skip_tail=False):
     lst = []
@@ -315,7 +316,6 @@ giro_imagen_gif_derecha = True
 #para organo si (calibracion en base al giro por defecto de la imagen)
 #para salto no (false)
 
-#probar de esta manera x mientras...
 import sys
 todos_frames = [ImageOps.mirror(f) for f in ImageSequence.Iterator(im)]
 im.close()
@@ -444,6 +444,19 @@ while(True):
         else:
             zoom -=cantidad
 
+        #tamanno maximo permitido (calibrar)
+        tamanno_actual = int( aspecto_normal(tamanno_mascara) * zoom )
+        if zoom <= 0 or tamanno_actual <= 20: #tamano minimo permitido
+            texto_proyeccion = "!"
+            texto_advertencia = True
+            #remueve el zoom aplicado
+            zoom+=cantidad
+        elif tamanno_actual >= 1000: #tamanno maximo permitido
+            texto_proyeccion = '!'
+            texto_advertencia = True
+            #remueve el zoom aplicado
+            zoom-=cantidad
+
     if funcion_rotar:
         if rotar_horario:
             rotacion += cantidad #grados
@@ -485,13 +498,13 @@ while(True):
     redimensionar_zoom(caras,tamanno_mascara,zoom) #quizas ver esto que devuelva otra cosa
     print "TIEMPO DEMORADO EN ZOOM: ",time.time()-tiempo_zoom
 
-    #agregar texto (**EXTRA**)
+
+    #agregar texto (**EXTRA**) --tambien para mensaje advertencia
     if 'texto_proyeccion' in locals(): #texto
         for cara in caras:
-            print texto_proyeccion
 
             imagen_texto = Image.new('RGB', cara.size,'black')
-            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',10)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',20)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
 
             draw = ImageDraw.Draw(imagen_texto)
             w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
@@ -503,7 +516,10 @@ while(True):
                 texto_proyeccion = '\n'.join(nuevo_string)
                 w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
 
-            pos = ( (imagen_texto.size[0] - w_draw)/2, 0)
+            if 'texto_advertencia' in locals(): #texto de advertencia en la esquina
+                pos = ( w_draw/2 , 0)
+            else:
+                pos = ( (aspecto_normal(tamanno_mascara) - w_draw)/2, 0)
 
             draw.text(pos, texto_proyeccion,font=fnt, fill='white')
             draw.text((pos[0]+1,pos[1]+1), texto_proyeccion,font=fnt, fill='white')
@@ -523,6 +539,8 @@ while(True):
             del draw
 
         del texto_proyeccion
+        if 'texto_advertencia' in locals():
+            del texto_advertencia
 
     tiempo_rotar = time.time()
     #ROTAR

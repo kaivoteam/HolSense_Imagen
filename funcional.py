@@ -1,70 +1,46 @@
 import time
-from PIL import Image, ImageFile, ImageChops,ImageOps
-
 from imports_imagenes import * #del codigo imports_imagenes.py
 
 ##donde va la cantidad de movimiento (Girar o zoom) ?cliente o server?
 
 #####-------CLIENTE (INDICA QUE ACCION REALIZAR)-----------------------
 if __name__ == "__main__":
-	##------------------DATOS NECESARIOS-----------------------------
-	##esto vendria definido de antemano (variables globales)
 
 	name_image = raw_input("Nombre de imagen GIF: ")
 
-	#Asumiendo que estan en la misma carpeta
-	im = Image.open("./imagenes/"+name_image+".gif")
-	print(im.format, im.size, im.mode)
-
-	frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
-	print "La imagen tiene %d frames"%(frames)
-	##------------------DATOS NECESARIOS-----------------------------
-
-
-	#Movimiento de la imagen a traves de actual
-	current = 0 #frame en el momento (actual)
-	zoom = 1.0  #zoom en el momento (actual)
-
-	#annade: memoria
-	caras_memoria = cargar_caras(im,current,frames)
-	centrar_4caras(caras_memoria)
+	inicializar(name_image)
 
 	while(True):
 		#ver lo de primero mover derecha o izq
-	    opcion = raw_input("1 Derecha \n2 Izquierda \n3 Zoom in \n4 Zoom out\n")
+		opcion = raw_input("Girar: \n1 Derecha \n2 Izquierda \nZoom:\n3 Zoom in \n4 Zoom out\nRotar:\n5 Horario \n6 Antihorario \n7 Centrar\n8 Agregar texto\n")
 
-	    start_time = time.time()
-
+		start_time = time.time()
+		texto_proyeccion = ""
 	    #asignar cantidad de mov
-	    #asignar un zoom maximo y zoom minimo
+		if opcion == '1': # movimiento girar derecha
+		    cantidad = 1
 
-	    if opcion == '1': # movimiento derecha
-	        current +=1 %frames
+		elif opcion == '2': #movimiento girar izquierda
+		    cantidad = 1
 
-	    elif opcion == '2': #movimiento izquierda
-	        current -=1 %frames
-	        if current <0: #ya que solo va en numeros positivos
-	            current += frames
+		elif opcion == '3': #hacer zoom
+		    cantidad = 0.1
 
-	    elif opcion == '3': #hacer zoom
-	        zoom+=0.1 #calibrar
+		elif opcion == '4': #quitar zoom
+		    cantidad = 0.1
 
-	    elif opcion == '4': #quitar zoom
-	        zoom-=0.1
-	    else:
-	        print("Movimiento invalido")
-	        continue
+		elif opcion== '5': #rotar horario
+		    cantidad = 15 #grados
 
-	    #>>>>>>> REALIZAR ACCION >>>>>>>
-	    #annade: memoria
-	    if opcion =='3' or opcion == '4': #para opciones que solo redimensionan (zoom)
-	    	memoria = True
-	    else:
-	    	memoria = False
+		elif opcion == '6': #rotar antihorario
+		    cantidad = 15 #grados
 
-	    #imagen, frames y angulos vienen de server?
-	    #global caras_memoria
-	    hacer(im, frames,current,zoom,memoria=memoria,caras_memoria =caras_memoria) ##funcion dentro de imports_imagenes
-	    #hacer(im, frames, angulos,current,zoom) ##funcion dentro de imports_imagenes
-	    
-	    print "Demoro %f segundos en total"%(time.time() - start_time)
+		elif opcion == '7':
+			print "por ver"
+
+		elif opcion == '8':
+			texto_proyeccion = raw_input("Ingrese texto: ")
+
+		hacer(opcion,cantidad,texto_proyeccion) ##mucho mas simplificado (todo lo configura el server) texto_proyeccion = "" para vacio
+
+		print "Demoro %f segundos en total"%(time.time() - start_time)
