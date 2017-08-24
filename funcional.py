@@ -40,6 +40,7 @@ if __name__ == "__main__":
 
 		elif opcion == '8':
 			texto_proyeccion = raw_input("Ingrese texto: ")
+			cantidad = 0
 
 		hacer(opcion,cantidad,texto_proyeccion) ##mucho mas simplificado (todo lo configura el server) texto_proyeccion = "" para vacio
 

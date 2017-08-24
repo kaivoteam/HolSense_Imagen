@@ -1,7 +1,9 @@
 from PIL import Image, ImageFile, ImageChops,ImageOps,ImageDraw,ImageFont,  ImageSequence
+
 import time
 import numpy as np
-
+import matplotlib.pyplot as plt
+from matplotlib import animation
 
 def redondear_a_int(numero):
     """ Descripcion:

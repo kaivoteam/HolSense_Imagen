@@ -152,11 +152,18 @@ def realizar_operacion(current=0,zoom=1.0,rotacion=0,memoria=False,limite=False,
     if limite:
         texto_proyectar = "!"
 
-    if texto_proyectar != "": #texto
+    if 'texto_proyectar' != "": #texto
         for cara in caras:
 
+            if limite:
+                tamanno = 30
+                desplazado = 0 #texto de advertencia en la esquina
+            else:
+                tamanno = 20
+                desplazado = aspecto_normal(tamanno_mascara)
+
             imagen_texto = Image.new('RGB', cara.size,'black')
-            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',20)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',tamanno)
 
             draw = ImageDraw.Draw(imagen_texto)
             w_draw, h_draw = draw.textsize(texto_proyectar,font=fnt)
@@ -168,10 +175,8 @@ def realizar_operacion(current=0,zoom=1.0,rotacion=0,memoria=False,limite=False,
                 texto_proyectar = '\n'.join(nuevo_string)
                 w_draw, h_draw = draw.textsize(texto_proyectar,font=fnt)
 
-            if limite: #texto de advertencia en la esquina
-                pos = ( w_draw/2 , 0)
-            else:
-                pos = ( (aspecto_normal(tamanno_mascara) - w_draw)/2, 0)
+            
+            pos = ( (desplazado - w_draw)/2, 0)
 
             draw.text(pos, texto_proyectar,font=fnt, fill='white')
             draw.text((pos[0]+1,pos[1]+1), texto_proyectar,font=fnt, fill='white')
@@ -185,14 +190,10 @@ def realizar_operacion(current=0,zoom=1.0,rotacion=0,memoria=False,limite=False,
             #actualizar referencia
             caras[caras.index(cara)] = nueva_cara
     
+            #draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
             cara.close()
             imagen_texto.close()
             del draw
-
-        del texto_proyectar
-        #if 'texto_advertencia' in locals():
-         #   del texto_advertencia  #probar limite cambiar a false
-
 
     cara_frente,cara_derecha,cara_izquierda,cara_atras = rotar_imagenes(caras,rotacion)
 

@@ -503,8 +503,15 @@ while(True):
     if 'texto_proyeccion' in locals(): #texto
         for cara in caras:
 
+            if 'texto_advertencia' in locals():
+                tamanno = 30
+                desplazado = 0 #texto de advertencia en la esquina
+            else:
+                tamanno = 20
+                desplazado = aspecto_normal(tamanno_mascara)
+
             imagen_texto = Image.new('RGB', cara.size,'black')
-            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',20)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',tamanno)#.load("arial.pil")#.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',15) #o FreeMono
 
             draw = ImageDraw.Draw(imagen_texto)
             w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
@@ -516,10 +523,8 @@ while(True):
                 texto_proyeccion = '\n'.join(nuevo_string)
                 w_draw, h_draw = draw.textsize(texto_proyeccion,font=fnt)
 
-            if 'texto_advertencia' in locals(): #texto de advertencia en la esquina
-                pos = ( w_draw/2 , 0)
-            else:
-                pos = ( (aspecto_normal(tamanno_mascara) - w_draw)/2, 0)
+            
+            pos = ( (desplazado - w_draw)/2, 0)
 
             draw.text(pos, texto_proyeccion,font=fnt, fill='white')
             draw.text((pos[0]+1,pos[1]+1), texto_proyeccion,font=fnt, fill='white')
