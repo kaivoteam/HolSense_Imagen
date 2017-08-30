@@ -84,6 +84,12 @@ def hacer(opcion,cantidad,texto_proyectar=""):
         funcion_rotar = True
         rotar_horario =False
 
+    elif opcion == '0': #Nueva funcion: reset
+        tipo_reset = raw_input("Ingrese tipo:\n1 Giro\n2 Zoom\n3 Rotacion\n0 Todas\n")
+        reset(tipo_reset)
+        memoria = False
+
+
     ##COMIENZA EL PROCESO. -------ASIGNAR MOVIMIENTO--------
     if funcion_giro:
         if not giro_imagen_gif_derecha: #gif gira a izquierda
@@ -152,49 +158,9 @@ def realizar_operacion(current=0,zoom=1.0,rotacion=0,memoria=False,limite=False,
     if limite:
         texto_proyectar = "!"
 
-    if 'texto_proyectar' != "": #texto
-        for cara in caras:
-
-            if limite:
-                tamanno = 30
-                desplazado = 0 #texto de advertencia en la esquina
-            else:
-                tamanno = 20
-                desplazado = aspecto_normal(tamanno_mascara)
-
-            imagen_texto = Image.new('RGB', cara.size,'black')
-            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',tamanno)
-
-            draw = ImageDraw.Draw(imagen_texto)
-            w_draw, h_draw = draw.textsize(texto_proyectar,font=fnt)
-
-            if w_draw > imagen_texto.size[0]: #subdividir en textos
-                veces = w_draw/imagen_texto.size[0]
-
-                nuevo_string = split_str(texto_proyectar,len(texto_proyectar)/(veces+1))
-                texto_proyectar = '\n'.join(nuevo_string)
-                w_draw, h_draw = draw.textsize(texto_proyectar,font=fnt)
-
-            
-            pos = ( (desplazado - w_draw)/2, 0)
-
-            draw.text(pos, texto_proyectar,font=fnt, fill='white')
-            draw.text((pos[0]+1,pos[1]+1), texto_proyectar,font=fnt, fill='white')
-            #draw.text((pos[0]-1,pos[1]-1), texto_proyectar,font=fnt, fill='white')
-
-            #para el efecto espejo del texto 
-            imagen_texto = ImageOps.mirror(imagen_texto)
-
-            nueva_cara = ImageChops.add(imagen_texto,cara) #probar add_modulo
-
-            #actualizar referencia
-            caras[caras.index(cara)] = nueva_cara
+    if texto_proyectar != "": #texto
+        colocar_texto(caras,texto_proyectar,limite)
     
-            #draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
-            cara.close()
-            imagen_texto.close()
-            del draw
-
     cara_frente,cara_derecha,cara_izquierda,cara_atras = rotar_imagenes(caras,rotacion)
 
     imagen_Final = posicionar_imagen(mascara,cara_frente,cara_izquierda,cara_derecha,cara_atras)
@@ -477,3 +443,85 @@ def split_str(seq, chunk, skip_tail=False):
     elif not skip_tail and seq:
         lst.extend([seq])
     return lst
+
+## Nuevas funciones:
+
+def reset(tipo):
+    """ Descripcion:
+            Funcion que resetea los indices de la imagen (volviendo al comienzo)
+
+        Args:
+            *tipo:  0: Todas (reset completo)
+                    1: Giro
+                    2: Zoom
+                    3: Rotacion
+    """
+    global current,zoom,rotacion
+    if tipo == '0' or tipo == 0:
+        current =rotacion=0
+        zoom =1
+    elif tipo == '1' or tipo ==1:
+        current = 0
+    elif tipo == '2' or tipo ==2:
+        zoom = 1
+    elif tipo == '3' or tipo == 3:
+        rotacion = 0
+
+def colocar_texto(caras,texto,limite=False):
+    """ Descripcion:
+            Funcion que posiciona el texto en las 4 caras,
+            si es limite anota texto de advertencia. (actualiza por referencia)
+
+        Args:
+            *caras: lista de las 4 caras
+            *texto: Texto a colocar en la imagen
+            *limite: si el texto es de advertencia
+    """   
+    for cara in caras:
+        if limite:
+            tamanno = 30
+            color = 'yellow' # or red
+            desplazado = 0 #texto de advertencia en la esquina
+        else:
+            tamanno = 20
+            color = 'white'
+            desplazado = aspecto_normal(tamanno_mascara_min())
+
+        imagen_texto = Image.new('RGB', cara.size,'black')
+        try:
+            fnt = ImageFont.truetype('/Pillow/Tests/fonts/DejaVuSans.ttf',size=tamanno)
+        except:
+            try:
+                fnt = ImageFont.truetype("arial.ttf", size=tamanno)
+            except:
+                #cargar fuente por defecto
+                fnt = ImageFont.load_default()
+
+        draw = ImageDraw.Draw(imagen_texto)
+        w_draw, h_draw = draw.textsize(texto,font=fnt)
+
+        if w_draw > imagen_texto.size[0]: #subdividir en textos
+            veces = w_draw/imagen_texto.size[0]
+
+            nuevo_string = split_str(texto,len(texto)/(veces+1))
+            texto = '\n'.join(nuevo_string)
+            w_draw, h_draw = draw.textsize(texto,font=fnt)
+
+        pos = ( (desplazado - w_draw)/2, 0)
+
+        draw.text(pos, texto,font=fnt, fill=color)
+        draw.text((pos[0]+1,pos[1]+1), texto,font=fnt, fill=color)
+        #draw.text((pos[0]-1,pos[1]-1), texto,font=fnt, fill=color)
+
+        #para el efecto espejo del texto 
+        imagen_texto = ImageOps.mirror(imagen_texto)
+
+        nueva_cara = ImageChops.add(imagen_texto,cara) #probar add_modulo
+
+        #actualizar referencia
+        caras[caras.index(cara)] = nueva_cara
+
+        #draw.line( (cara.size[0]/2, 0) + (cara.size[0]/2,cara.size[1]/2) ,fill='white')
+        cara.close()
+        imagen_texto.close()
+        del draw

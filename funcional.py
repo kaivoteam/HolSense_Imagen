@@ -12,10 +12,11 @@ if __name__ == "__main__":
 
 	while(True):
 		#ver lo de primero mover derecha o izq
-		opcion = raw_input("Girar: \n1 Derecha \n2 Izquierda \nZoom:\n3 Zoom in \n4 Zoom out\nRotar:\n5 Horario \n6 Antihorario \n7 Centrar\n8 Agregar texto\n")
+		opcion = raw_input("Girar: \n1 Derecha \n2 Izquierda \nZoom:\n3 Zoom in \n4 Zoom out\nRotar:\n5 Horario \n6 Antihorario \n7 Centrar\n8 Agregar texto\n0 Reset\n")
 
 		start_time = time.time()
 		texto_proyeccion = ""
+		cantidad = 0
 	    #asignar cantidad de mov
 		if opcion == '1': # movimiento girar derecha
 		    cantidad = 1
@@ -40,7 +41,6 @@ if __name__ == "__main__":
 
 		elif opcion == '8':
 			texto_proyeccion = raw_input("Ingrese texto: ")
-			cantidad = 0
 
 		hacer(opcion,cantidad,texto_proyeccion) ##mucho mas simplificado (todo lo configura el server) texto_proyeccion = "" para vacio
 

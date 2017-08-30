@@ -141,31 +141,16 @@ def trim(imag):
         return False#imag
 
 
-ajustar_aspecto = True 
-crop_caras = []
-
-def ajustar_4caras():
-    """ Descripcion:
-            Funcion que cambia las variables globales para ajustar
-            las 4 caras de la imagen proyectada
-    """
-    global ajustar_aspecto,crop_caras
-    ajustar_aspecto = True
-    del crop_caras[:] #vacia la lista
-
 def centrar_4caras(caras): #centra
     """ Descripcion:
             Funcion que centra las 4 caras basado en el trim 
             y rellena la imagen para dejarla cuadrada
     """
-    global ajustar_aspecto,crop_caras
 
     for i in range(len(caras)):
         cara = caras[i].copy()
 
-        if ajustar_aspecto: #guarda las dimensiones para centrar de la primera cara
-            crop_caras.append(trim(cara)) #para mantener el aspecto del primero
-        dimensiones_trim = crop_caras[i]
+        dimensiones_trim = trim(cara)
 
         nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
 
@@ -180,9 +165,6 @@ def centrar_4caras(caras): #centra
 
         caras[i].close()
         caras[i] = imagen_a_guardar
-
-    if ajustar_aspecto:
-        ajustar_aspecto=False
 
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
@@ -330,7 +312,7 @@ for i in range(frames):
 
     #CENTRAR
     centrar_4caras(caras) #con respecto al objeto (bbox)
-    
+
     #Para posicionar la imagen
     mascara = crear_mascara()
 
