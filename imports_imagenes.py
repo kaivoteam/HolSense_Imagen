@@ -90,6 +90,9 @@ def hacer(opcion,cantidad,texto_proyectar=""):
         memoria = False
 
 
+    elif opcion == '7': #nueva funcion: centrar
+        ajustar_4caras()
+
     ##COMIENZA EL PROCESO. -------ASIGNAR MOVIMIENTO--------
     if funcion_giro:
         if not giro_imagen_gif_derecha: #gif gira a izquierda

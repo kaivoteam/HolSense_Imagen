@@ -35,9 +35,7 @@ if __name__ == "__main__":
 
 		elif opcion == '6': #rotar antihorario
 		    cantidad = 15 #grados
-
-		elif opcion == '7':
-			print "por ver"
+		#para opcion 7 solo enviar '7' o centrar
 
 		elif opcion == '8':
 			texto_proyeccion = raw_input("Ingrese texto: ")
