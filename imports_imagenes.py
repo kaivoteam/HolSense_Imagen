@@ -116,10 +116,12 @@ def hacer(opcion,cantidad,texto_proyectar=""):
         tamanno_actual = int( aspecto_normal(tamanno_mascara) * zoom )
         if zoom <= 0 or tamanno_actual <= 20: #tamano minimo permitido
             limite = True
+            texto_proyectar = "zoom minimo"
             #remueve el zoom aplicado
             zoom+=cantidad
         elif tamanno_actual >= 1000: #tamanno maximo permitido
             limite=True
+            texto_proyectar = "zoom maximo"
             #remueve el zoom aplicado
             zoom-=cantidad
 
@@ -128,6 +130,9 @@ def hacer(opcion,cantidad,texto_proyectar=""):
             rotacion += cantidad #grados
         else:
             rotacion -= cantidad
+    #modificacion
+    else:
+        rotacion=0
 
     realizar_operacion(current,zoom,rotacion,memoria,limite,texto_proyectar)
 
@@ -158,10 +163,7 @@ def realizar_operacion(current=0,zoom=1.0,rotacion=0,memoria=False,limite=False,
     redimensionar_zoom(caras,tamanno_mascara,zoom) #quizas ver esto que devuelva otra cosa
 
     #agregar texto (**EXTRA**) --tambien para mensaje advertencia
-    if limite:
-        texto_proyectar = "!"
-
-    if texto_proyectar != "": #texto
+    if texto_proyectar != "" or limite: #texto
         colocar_texto(caras,texto_proyectar,limite)
     
     cara_frente,cara_derecha,cara_izquierda,cara_atras = rotar_imagenes(caras,rotacion)
@@ -479,16 +481,16 @@ def colocar_texto(caras,texto,limite=False):
             *caras: lista de las 4 caras
             *texto: Texto a colocar en la imagen
             *limite: si el texto es de advertencia
-    """   
+    """  
+    if limite:
+        texto += " alcanzado" 
     for cara in caras:
         if limite:
-            tamanno = 30
+            tamanno = 15
             color = 'yellow' # or red
-            desplazado = 0 #texto de advertencia en la esquina
         else:
             tamanno = 20
             color = 'white'
-            desplazado = aspecto_normal(tamanno_mascara_min())
 
         imagen_texto = Image.new('RGB', cara.size,'black')
         try:
@@ -510,7 +512,10 @@ def colocar_texto(caras,texto,limite=False):
             texto = '\n'.join(nuevo_string)
             w_draw, h_draw = draw.textsize(texto,font=fnt)
 
-        pos = ( (desplazado - w_draw)/2, 0)
+        if limite:
+            pos = ( 0, 0) #texto de advertencia en la esquina
+        else:
+            pos = ( (aspecto_normal(tamanno_mascara_min()) - w_draw)/2, 0)
 
         draw.text(pos, texto,font=fnt, fill=color)
         draw.text((pos[0]+1,pos[1]+1), texto,font=fnt, fill=color)
