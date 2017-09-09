@@ -12,17 +12,17 @@ if __name__ == "__main__":
 
 	while(True):
 		#ver lo de primero mover derecha o izq
-		opcion = raw_input("Girar: \n1 Derecha \n2 Izquierda \nZoom:\n3 Zoom in \n4 Zoom out\nRotar:\n5 Horario \n6 Antihorario \n7 Centrar\n8 Agregar texto\n0 Reset\n")
+		opcion = raw_input("Girar: \n1 Derecha \n2 Izquierda \nZoom:\n3 Zoom in \n4 Zoom out\n5 Rotar\n7 Centrar\n8 Agregar texto\n0 Reset\n")
 
 		start_time = time.time()
 		texto_proyeccion = ""
 		cantidad = 0
 	    #asignar cantidad de mov
 		if opcion == '1': # movimiento girar derecha
-		    cantidad = 1
+		    cantidad = 0.1
 
 		elif opcion == '2': #movimiento girar izquierda
-		    cantidad = 1
+		    cantidad = 0.1
 
 		elif opcion == '3': #hacer zoom
 		    cantidad = 0.1
@@ -30,11 +30,8 @@ if __name__ == "__main__":
 		elif opcion == '4': #quitar zoom
 		    cantidad = 0.1
 
-		elif opcion== '5': #rotar horario
-		    cantidad = 15 #grados
+		#para opcion rotar solo enviar opcion "5" (incluye antihorario-horario--mismo mov)
 
-		elif opcion == '6': #rotar antihorario
-		    cantidad = 15 #grados
 		#para opcion 7 solo enviar '7' o centrar
 
 		elif opcion == '8':

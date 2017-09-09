@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
+
 def redondear_a_int(numero):
     """ Descripcion:
             Funcion que redondea el numero al entero mas cercano
@@ -86,13 +87,13 @@ def posicionar_imagen(imagen,cara_frente,cara_izquierda,cara_derecha,cara_atras)
     return imagen
 
 ##-----------------CREAR LA IMAGEN---------------
-def cargar_caras(im,current,frames,giro_imagen_gif_derecha=True):
+def cargar_caras(todos_frames,current,frames,giro_imagen_gif_derecha=True):
     """ Descripcion:
             Funcion que carga las 4 caras de la imagen y las devuelve en una lista
             en orden de: cara frente, cara derecha, cara izquierda y cara atras
 
         Args:
-            *im: imagen
+            *todos_frames: todos los frames de la imagen (en una lista)
             *current: actual frame
             *frames: cantidad de frames de la imagen
             *giro_imagen_gif_derecha: booleano indicando si el gif gira hacia la derecha
@@ -108,7 +109,7 @@ def cargar_caras(im,current,frames,giro_imagen_gif_derecha=True):
     for angulo in angulos: #extraer 4 angulos a partir del current
         frame_angulo = (angulo_a_frame(angulo, frames )+current) % frames
         #print ("para angulo", angulo,"es necesario ir al frame ",frame_angulo)
-        nueva_im = im[frame_angulo-1].copy()
+        nueva_im = todos_frames[frame_angulo-1].copy()
         
         caras.append(nueva_im) #se ve choro asi ImageChops.invert(imagen_a_guardar)
     return list(caras)
@@ -141,16 +142,31 @@ def trim(imag):
         return False#imag
 
 
+ajustar_aspecto = True 
+crop_caras = []
+
+def ajustar_4caras():
+    """ Descripcion:
+            Funcion que cambia las variables globales para ajustar
+            las 4 caras de la imagen proyectada
+    """
+    global ajustar_aspecto,crop_caras
+    ajustar_aspecto = True
+    del crop_caras[:] #vacia la lista
+
 def centrar_4caras(caras): #centra
     """ Descripcion:
             Funcion que centra las 4 caras basado en el trim 
             y rellena la imagen para dejarla cuadrada
     """
+    global ajustar_aspecto,crop_caras
 
     for i in range(len(caras)):
         cara = caras[i].copy()
 
-        dimensiones_trim = trim(cara)
+        if ajustar_aspecto: #guarda las dimensiones para centrar de la primera cara
+            crop_caras.append(trim(cara)) #para mantener el aspecto del primero
+        dimensiones_trim = crop_caras[i]
 
         nueva_cara = cara.crop(dimensiones_trim) #achicar bordes (centra al centro xd)
 
@@ -165,6 +181,9 @@ def centrar_4caras(caras): #centra
 
         caras[i].close()
         caras[i] = imagen_a_guardar
+
+    if ajustar_aspecto:
+        ajustar_aspecto=False
 
 
 def redimensionar_zoom(caras,tamanno_mascara,zoom):
@@ -207,30 +226,6 @@ def redimensionar_zoom(caras,tamanno_mascara,zoom):
             imagen_fondo = Image.new('RGB', (aspecto_normal(tamanno_mascara),aspecto_normal(tamanno_mascara)),'black')
             imagen_fondo.paste(nueva_im, ((imagen_fondo.size[0] - nueva_im.size[0])/2 ,(imagen_fondo.size[1] - nueva_im.size[1])/2))
             nueva_im = imagen_fondo
-        """
-        w, h = imagen_a_guardar.size
-        rad = w/3
-        circle = Image.new('L', (rad * 2, rad * 2), 0)
-        draw = ImageDraw.Draw(circle)
-        draw.ellipse((0, 0, rad * 2, rad * 2), fill=255)
-        alpha = Image.new('L', imagen_a_guardar.size, 255)
-        alpha.paste(circle.crop((0, 0, rad, rad)), (0, 0))
-        alpha.paste(circle.crop((0, rad, rad, rad * 2)), (0, h - rad))
-        alpha.paste(circle.crop((rad, 0, rad * 2, rad)), (w - rad, 0))
-        alpha.paste(circle.crop((rad, rad, rad * 2, rad * 2)), (w - rad, h - rad))
-        imagen_a_guardar.putalpha(alpha)
-        #imagen_a_guardar.show()
-        #asd  
-
-                    bigsize = (im.size[0] * 3, im.size[1] * 3)
-
-            mask = Image.new('L', bigsize, 0)
-            draw = ImageDraw.Draw(mask) 
-            draw.ellipse((0, 0) + bigsize, fill=255)
-            mask = mask.resize(imagen_a_guardar.size, Image.ANTIALIAS)
-
-            imagen_a_guardar.putalpha(mask)
-        """
 
         caras[i].close()
         caras[i] = nueva_im
@@ -254,12 +249,17 @@ def rotar_imagenes(caras,rotacion=0):
         nuevas_caras.append( caras[3].rotate(180+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
     else:
         nuevas_caras.append( caras[0].rotate(180+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
+    
+    if rotacion == 180: #se dan vuelta las caras
+        nuevas_caras.append( caras[2].rotate(90+de_cabeza,Image.BILINEAR)  )#cara izq
 
-    nuevas_caras.append( caras[1].rotate(270 +de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara der
-    nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True))   #cara izq
+    nuevas_caras.append( caras[1].rotate(270 +de_cabeza,Image.BILINEAR)) #,expand=True) )  #cara der
+    
+    if rotacion != 180:
+        nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True))   #cara izq
 
-    #actualizacion en rotar por efecto espejo
-    if de_cabeza == 180:
+    #actualizacion en rotar por efecto espejo 
+    if de_cabeza == 180: #se dan vuelta las caras
         nuevas_caras.append( caras[0].rotate(0+de_cabeza+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
     else:
         nuevas_caras.append( caras[3].rotate(0+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
@@ -274,13 +274,20 @@ def crear_mascara():
     w,h =  1280,720 #854,480 #(se demora como 0.2 y necesita imagenes con mayor resolucion 640x640) costoso? 
     return Image.new('RGB', (w,h), 'black')
 
+def tamanno_mascara_min():
+    w,h =  1280,720
+    return min([w,h])
+
+
 ###---------------CODIGOO--------------------
 
 name_image = raw_input("Nombre de imagen + extension: ")
 
+animacion = int(raw_input("animacion?"))
+
 start_time = time.time()
 #Asumiendo que estan en la misma carpeta
-im = Image.open("../imagenes/"+name_image)
+im = Image.open(name_image)
 print(im.format, im.size, im.mode)
 
 frames = cantidad_frames(im)+1 #asumiendo que los frames da vuelta 360
@@ -290,7 +297,7 @@ if frames >1:
 
 secuencia = []
 tiempos_crear_frames =[]
-for i in range(frames):
+for i in range(frames-1):
     tiempo1 = time.time()
     caras = []
 
@@ -299,15 +306,21 @@ for i in range(frames):
     #im.seek(indice)
     print("En base al indice: ",indice)
 
-    rotacion = -1 #hacia la izquierda
+    if animacion == 1: 
+        imagen_espejo = ImageOps.mirror(todos_frames[indice].copy())
 
-    if frames == 1: #imagen plana
+        caras.append(todos_frames[indice].copy()) 
+        caras.append(todos_frames[indice].rotate(180,Image.BILINEAR).copy()) #der
+        caras.append(todos_frames[indice].rotate(180,Image.BILINEAR).copy())  #izq
+        caras.append(todos_frames[indice].copy()) #atras
+
+    elif frames == 1: #imagen plana
         for i in range(4): #repeticion de la misma cara
             #mirror
             imagen_espejo = ImageOps.mirror(im.copy())
             caras.append(imagen_espejo)
     
-    if frames > 1: #gif
+    elif frames > 1: #gif
         caras = cargar_caras(todos_frames,indice,frames) #para que zoom sea mas rapido
 
     #CENTRAR
@@ -326,13 +339,14 @@ for i in range(frames):
     secuencia.append(imagen_Final.copy())
     tiempos_crear_frames.append(time.time()-tiempo1)
 
+
 #mostrar y guardar ultima
 imagen_Final.show()
 imagen_Final.save("imagen.png")
 
 #guardar secuencia
 if len(secuencia)>1:
-    imagen_Final.save("out.gif", save_all=True, append_images=secuencia,loop=100,duration=80)
+    imagen_Final.save("out.gif", save_all=True, append_images=secuencia,loop=100,duration=100)
 
 import numpy as np
 print "Demoro %f segundos en promedio por frame"%(np.mean(tiempos_crear_frames))

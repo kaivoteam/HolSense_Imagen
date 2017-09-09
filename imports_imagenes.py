@@ -47,7 +47,7 @@ def inicializar(nombre_imagen):
 
 
 #####-------CODIGO PARA MOVER-----------------------
-def hacer(opcion,cantidad,texto_proyectar=""):
+def hacer(opcion,cantidad=0,texto_proyectar=""):
     global current,zoom,rotacion,giro_imagen_gif_derecha,frames
     #definir cual es el mensaje de "opcion" que se manda
 
@@ -76,13 +76,9 @@ def hacer(opcion,cantidad,texto_proyectar=""):
         funcion_zoom = True
         zoom_in = False
 
-    elif opcion== '5': #rotar horario
+    elif opcion== '5': #rotar horario-antihorario
         funcion_rotar = True
-        rotar_horario = True
 
-    elif opcion == '6': #rotar antihorario
-        funcion_rotar = True
-        rotar_horario =False
 
     elif opcion == '0': #Nueva funcion: reset
         tipo_reset = raw_input("Ingrese tipo:\n1 Giro\n2 Zoom\n3 Rotacion\n0 Todas\n")
@@ -94,15 +90,22 @@ def hacer(opcion,cantidad,texto_proyectar=""):
         ajustar_4caras()
 
     ##COMIENZA EL PROCESO. -------ASIGNAR MOVIMIENTO--------
+    if funcion_rotar:
+        rotacion += 180 #da vuelta de cabeza
+        rotacion = rotacion % 360
+
     if funcion_giro:
         if not giro_imagen_gif_derecha: #gif gira a izquierda
             giro_derecha = not giro_derecha
 
+        if rotacion == 180: #objeto de cabeza
+            giro_derecha = not giro_derecha
+
         ##asignar movimiento
         if giro_derecha:       #derecha
-            current-=cantidad
+            current-= redondear_a_int(cantidad*frames)
         elif not giro_derecha: #izquierda
-            current+=cantidad
+            current+= redondear_a_int(cantidad*frames)
         current = current%frames
 
     if funcion_zoom:
@@ -124,15 +127,6 @@ def hacer(opcion,cantidad,texto_proyectar=""):
             texto_proyectar = "zoom maximo"
             #remueve el zoom aplicado
             zoom-=cantidad
-
-    if funcion_rotar:
-        if rotar_horario:
-            rotacion += cantidad #grados
-        else:
-            rotacion -= cantidad
-    #modificacion
-    else:
-        rotacion=0
 
     realizar_operacion(current,zoom,rotacion,memoria,limite,texto_proyectar)
 
@@ -416,12 +410,17 @@ def rotar_imagenes(caras,rotacion=0):
         nuevas_caras.append( caras[3].rotate(180+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
     else:
         nuevas_caras.append( caras[0].rotate(180+rotacion,Image.BILINEAR)) #,expand=True) )  #cara frente
+    
+    if rotacion == 180: #se dan vuelta las caras
+        nuevas_caras.append( caras[2].rotate(90+de_cabeza,Image.BILINEAR)  )#cara izq
 
-    nuevas_caras.append( caras[1].rotate(270 +de_cabeza+rotacion,Image.BILINEAR)) #,expand=True) )  #cara der
-    nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True))   #cara izq
+    nuevas_caras.append( caras[1].rotate(270 +de_cabeza,Image.BILINEAR)) #,expand=True) )  #cara der
+    
+    if rotacion != 180:
+        nuevas_caras.append( caras[2].rotate(90+de_cabeza+rotacion,Image.BILINEAR)) #,expand=True))   #cara izq
 
-    #actualizacion en rotar por efecto espejo
-    if de_cabeza == 180:
+    #actualizacion en rotar por efecto espejo 
+    if de_cabeza == 180: #se dan vuelta las caras
         nuevas_caras.append( caras[0].rotate(0+de_cabeza+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
     else:
         nuevas_caras.append( caras[3].rotate(0+rotacion,Image.BILINEAR))#,expand=True))      #cara atras
