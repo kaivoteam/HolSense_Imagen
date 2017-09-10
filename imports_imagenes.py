@@ -80,7 +80,7 @@ def hacer(opcion,cantidad=0,texto_proyectar=""):
         funcion_rotar = True
 
 
-    elif opcion= '-': #reset total
+    elif opcion== '-': #reset total
         reset('0')
         memoria = False
 
