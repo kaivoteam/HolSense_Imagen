@@ -80,11 +80,14 @@ def hacer(opcion,cantidad=0,texto_proyectar=""):
         funcion_rotar = True
 
 
+    elif opcion= '-': #reset total
+        reset('0')
+        memoria = False
+
     elif opcion == '0': #Nueva funcion: reset
         tipo_reset = raw_input("Ingrese tipo:\n1 Giro\n2 Zoom\n3 Rotacion\n0 Todas\n")
         reset(tipo_reset)
         memoria = False
-
 
     elif opcion == '7': #nueva funcion: centrar
         ajustar_4caras()
