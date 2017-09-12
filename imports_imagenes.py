@@ -488,7 +488,7 @@ def colocar_texto(caras,texto,limite=False):
         texto += " alcanzado" 
     for cara in caras:
         if limite:
-            tamanno = 15
+            tamanno = 18
             color = 'yellow' # or red
         else:
             tamanno = 20
